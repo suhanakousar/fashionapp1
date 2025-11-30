@@ -5,7 +5,10 @@ const ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/favicon.png',
+  '/icons/favicon.ico',
+  '/icons/favicon-96x96.png',
+  '/icons/web-app-manifest-192x192.png',
+  '/icons/web-app-manifest-512x512.png',
   // add your main bundles / css / fonts / icons here
   // These will be auto-cached by Vite build
 ];
