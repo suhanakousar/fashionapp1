@@ -1,14 +1,4 @@
 import {
-  users,
-  designs,
-  designImages,
-  clients,
-  measurements,
-  orders,
-  orderFiles,
-  billingEntries,
-  notifications,
-  categories,
   type User,
   type InsertUser,
   type Design,
@@ -32,9 +22,10 @@ import {
   type DesignWithImages,
   type ClientWithDetails,
   type OrderWithDetails,
+  generateId,
 } from "@shared/schema";
-import { db } from "./db";
-import { eq, desc, and, sql, ilike, or, inArray } from "drizzle-orm";
+import { getDb } from "./db";
+import { ObjectId } from "mongodb";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -97,215 +88,506 @@ export interface IStorage {
   }>;
 }
 
+// Helper function to convert MongoDB document to our type
+function toUser(doc: any): User {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    name: doc.name,
+    email: doc.email,
+    password: doc.password,
+    role: doc.role || "designer",
+    businessName: doc.businessName,
+    businessPhone: doc.businessPhone,
+    businessAddress: doc.businessAddress,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toDesign(doc: any): Design {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    designerId: doc.designerId,
+    title: doc.title,
+    description: doc.description,
+    price: doc.price,
+    category: doc.category,
+    isPublished: doc.isPublished ?? false,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toDesignImage(doc: any): DesignImage {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    designId: doc.designId,
+    imageUrl: doc.imageUrl,
+    sortOrder: doc.sortOrder ?? 0,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toClient(doc: any): Client {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    name: doc.name,
+    phone: doc.phone,
+    whatsapp: doc.whatsapp,
+    email: doc.email,
+    address: doc.address,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toMeasurement(doc: any): Measurement {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    clientId: doc.clientId,
+    label: doc.label,
+    chest: doc.chest,
+    waist: doc.waist,
+    hips: doc.hips,
+    shoulder: doc.shoulder,
+    sleeve: doc.sleeve,
+    length: doc.length,
+    inseam: doc.inseam,
+    neck: doc.neck,
+    customMeasurements: doc.customMeasurements,
+    notes: doc.notes,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toOrder(doc: any): Order {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    clientId: doc.clientId,
+    designId: doc.designId,
+    designerId: doc.designerId,
+    status: doc.status || "requested",
+    preferredDate: doc.preferredDate,
+    notes: doc.notes,
+    measurementId: doc.measurementId,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toOrderFile(doc: any): OrderFile {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    orderId: doc.orderId,
+    fileUrl: doc.fileUrl,
+    fileType: doc.fileType,
+    fileName: doc.fileName,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toBillingEntry(doc: any): BillingEntry {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    orderId: doc.orderId,
+    clientId: doc.clientId,
+    description: doc.description,
+    amount: doc.amount,
+    paid: doc.paid ?? false,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toNotification(doc: any): Notification {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    userId: doc.userId,
+    type: doc.type,
+    title: doc.title,
+    message: doc.message,
+    read: doc.read ?? false,
+    metadata: doc.metadata,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toCategory(doc: any): Category {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    name: doc.name,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
 export class DatabaseStorage implements IStorage {
+  private async getDb() {
+    return getDb();
+  }
+
   async getUser(id: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    const db = await this.getDb();
+    const doc = await db.collection("users").findOne({ id });
+    return doc ? toUser(doc) : undefined;
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
+    const db = await this.getDb();
+    const doc = await db.collection("users").findOne({ email });
+    return doc ? toUser(doc) : undefined;
   }
 
   async createUser(user: InsertUser): Promise<User> {
-    const [newUser] = await db.insert(users).values(user).returning();
-    return newUser;
+    const db = await this.getDb();
+    const id = generateId();
+    const newUser = {
+      id,
+      ...user,
+      role: user.role || "designer",
+      createdAt: new Date(),
+    };
+    await db.collection("users").insertOne(newUser);
+    return toUser(newUser);
   }
 
   async updateUser(id: string, data: Partial<User>): Promise<User | undefined> {
-    const [updated] = await db.update(users).set(data).where(eq(users.id, id)).returning();
-    return updated;
+    const db = await this.getDb();
+    const result = await db.collection("users").findOneAndUpdate(
+      { id },
+      { $set: data },
+      { returnDocument: "after" }
+    );
+    return result ? toUser(result) : undefined;
   }
 
   async getDesigns(published?: boolean): Promise<DesignWithImages[]> {
-    const allDesigns = await db.query.designs.findMany({
-      where: published !== undefined ? eq(designs.isPublished, published) : undefined,
-      with: { images: true },
-      orderBy: desc(designs.createdAt),
-    });
-    return allDesigns;
+    const db = await this.getDb();
+    const query = published !== undefined ? { isPublished: published } : {};
+    const designs = await db.collection("designs")
+      .find(query)
+      .sort({ createdAt: -1 })
+      .toArray();
+    
+    const designIds = designs.map(d => d.id || d._id?.toString() || "");
+    const images = await db.collection("design_images")
+      .find({ designId: { $in: designIds } })
+      .toArray();
+    
+    const imagesMap = new Map<string, DesignImage[]>();
+    for (const img of images) {
+      const designId = img.designId;
+      if (!imagesMap.has(designId)) {
+        imagesMap.set(designId, []);
+      }
+      imagesMap.get(designId)!.push(toDesignImage(img));
+    }
+    
+    return designs.map(d => ({
+      ...toDesign(d),
+      images: (imagesMap.get(d.id || d._id?.toString() || "") || []).sort((a, b) => a.sortOrder - b.sortOrder),
+    }));
   }
 
   async getDesign(id: string): Promise<DesignWithImages | undefined> {
-    const design = await db.query.designs.findFirst({
-      where: eq(designs.id, id),
-      with: { images: true },
-    });
-    return design;
+    const db = await this.getDb();
+    const design = await db.collection("designs").findOne({ id });
+    if (!design) return undefined;
+    
+    const images = await db.collection("design_images")
+      .find({ designId: id })
+      .sort({ sortOrder: 1 })
+      .toArray();
+    
+    return {
+      ...toDesign(design),
+      images: images.map(toDesignImage),
+    };
   }
 
   async createDesign(design: InsertDesign): Promise<Design> {
-    const [newDesign] = await db.insert(designs).values(design).returning();
-    return newDesign;
+    const db = await this.getDb();
+    const id = generateId();
+    const newDesign = {
+      id,
+      ...design,
+      isPublished: design.isPublished ?? false,
+      createdAt: new Date(),
+    };
+    await db.collection("designs").insertOne(newDesign);
+    return toDesign(newDesign);
   }
 
   async updateDesign(id: string, data: Partial<Design>): Promise<Design | undefined> {
-    const [updated] = await db.update(designs).set(data).where(eq(designs.id, id)).returning();
-    return updated;
+    const db = await this.getDb();
+    const result = await db.collection("designs").findOneAndUpdate(
+      { id },
+      { $set: data },
+      { returnDocument: "after" }
+    );
+    return result ? toDesign(result) : undefined;
   }
 
   async deleteDesign(id: string): Promise<void> {
-    // Delete related records first due to foreign key constraints
+    const db = await this.getDb();
     // Get all orders for this design
-    const designOrders = await db.select().from(orders).where(eq(orders.designId, id));
+    const designOrders = await db.collection("orders").find({ designId: id }).toArray();
+    const orderIds = designOrders.map(o => o.id || o._id?.toString() || "");
     
     // Delete billing entries for these orders
-    for (const order of designOrders) {
-      await db.delete(billingEntries).where(eq(billingEntries.orderId, order.id));
+    if (orderIds.length > 0) {
+      await db.collection("billing_entries").deleteMany({ orderId: { $in: orderIds } });
       // Delete order files
-      await db.delete(orderFiles).where(eq(orderFiles.orderId, order.id));
+      await db.collection("order_files").deleteMany({ orderId: { $in: orderIds } });
     }
     
     // Delete orders
-    await db.delete(orders).where(eq(orders.designId, id));
+    await db.collection("orders").deleteMany({ designId: id });
     
-    // Delete design images (should cascade, but being explicit)
-    await db.delete(designImages).where(eq(designImages.designId, id));
+    // Delete design images
+    await db.collection("design_images").deleteMany({ designId: id });
     
     // Finally delete the design
-    await db.delete(designs).where(eq(designs.id, id));
+    await db.collection("designs").deleteOne({ id });
   }
 
   async getDesignImages(designId: string): Promise<DesignImage[]> {
-    return db.select().from(designImages).where(eq(designImages.designId, designId));
+    const db = await this.getDb();
+    const images = await db.collection("design_images")
+      .find({ designId })
+      .sort({ sortOrder: 1 })
+      .toArray();
+    return images.map(toDesignImage);
   }
 
   async createDesignImage(image: InsertDesignImage): Promise<DesignImage> {
-    const [newImage] = await db.insert(designImages).values(image).returning();
-    return newImage;
+    const db = await this.getDb();
+    const id = generateId();
+    const newImage = {
+      id,
+      ...image,
+      sortOrder: image.sortOrder ?? 0,
+      createdAt: new Date(),
+    };
+    await db.collection("design_images").insertOne(newImage);
+    return toDesignImage(newImage);
   }
 
   async updateDesignImageOrder(id: string, sortOrder: number): Promise<void> {
-    await db.update(designImages).set({ sortOrder }).where(eq(designImages.id, id));
+    const db = await this.getDb();
+    await db.collection("design_images").updateOne(
+      { id },
+      { $set: { sortOrder } }
+    );
   }
 
   async deleteDesignImage(id: string): Promise<void> {
-    await db.delete(designImages).where(eq(designImages.id, id));
+    const db = await this.getDb();
+    await db.collection("design_images").deleteOne({ id });
   }
 
   async deleteDesignImages(designId: string): Promise<void> {
-    await db.delete(designImages).where(eq(designImages.designId, designId));
+    const db = await this.getDb();
+    await db.collection("design_images").deleteMany({ designId });
   }
 
   async getClients(): Promise<ClientWithDetails[]> {
-    const allClients = await db.query.clients.findMany({
-      with: {
-        measurements: true,
-        orders: {
-          with: {
-            design: { with: { images: true } },
-            files: true,
-            billingEntries: true,
-          },
-        },
-        billingEntries: true,
-      },
-      orderBy: desc(clients.createdAt),
-    });
-
-    return allClients.map((client) => {
-      const totalSpent = client.billingEntries
+    const db = await this.getDb();
+    const clients = await db.collection("clients")
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+    
+    const clientIds = clients.map(c => c.id || c._id?.toString() || "");
+    
+    const [measurements, orders, billingEntries] = await Promise.all([
+      db.collection("measurements").find({ clientId: { $in: clientIds } }).toArray(),
+      db.collection("orders").find({ clientId: { $in: clientIds } }).toArray(),
+      db.collection("billing_entries").find({ clientId: { $in: clientIds } }).toArray(),
+    ]);
+    
+    const measurementsMap = new Map<string, Measurement[]>();
+    for (const m of measurements) {
+      const clientId = m.clientId;
+      if (!measurementsMap.has(clientId)) {
+        measurementsMap.set(clientId, []);
+      }
+      measurementsMap.get(clientId)!.push(toMeasurement(m));
+    }
+    
+    const ordersMap = new Map<string, Order[]>();
+    for (const o of orders) {
+      const clientId = o.clientId;
+      if (!ordersMap.has(clientId)) {
+        ordersMap.set(clientId, []);
+      }
+      ordersMap.get(clientId)!.push(toOrder(o));
+    }
+    
+    const billingMap = new Map<string, BillingEntry[]>();
+    for (const b of billingEntries) {
+      const clientId = b.clientId;
+      if (!billingMap.has(clientId)) {
+        billingMap.set(clientId, []);
+      }
+      billingMap.get(clientId)!.push(toBillingEntry(b));
+    }
+    
+    return clients.map(client => {
+      const clientId = client.id || client._id?.toString() || "";
+      const clientBilling = billingMap.get(clientId) || [];
+      const totalSpent = clientBilling
         .filter((e) => e.paid)
         .reduce((sum, e) => sum + parseFloat(e.amount), 0);
-      const outstandingBalance = client.billingEntries
+      const outstandingBalance = clientBilling
         .filter((e) => !e.paid)
         .reduce((sum, e) => sum + parseFloat(e.amount), 0);
-      return { ...client, totalSpent, outstandingBalance };
+      
+      return {
+        ...toClient(client),
+        measurements: measurementsMap.get(clientId) || [],
+        orders: (ordersMap.get(clientId) || []) as any, // Will be populated later if needed
+        billingEntries: clientBilling,
+        totalSpent,
+        outstandingBalance,
+      };
     });
   }
 
   async getClient(id: string): Promise<ClientWithDetails | undefined> {
-    const client = await db.query.clients.findFirst({
-      where: eq(clients.id, id),
-      with: {
-        measurements: { orderBy: desc(measurements.createdAt) },
-        orders: {
-          with: {
-            design: { with: { images: true } },
-            files: true,
-            billingEntries: true,
-          },
-          orderBy: desc(orders.createdAt),
-        },
-        billingEntries: { orderBy: desc(billingEntries.createdAt) },
-      },
-    });
-
+    const db = await this.getDb();
+    const client = await db.collection("clients").findOne({ id });
     if (!client) return undefined;
-
-    const totalSpent = client.billingEntries
+    
+    const clientId = client.id || client._id?.toString() || "";
+    
+    const [measurements, orders, billingEntries] = await Promise.all([
+      db.collection("measurements").find({ clientId }).sort({ createdAt: -1 }).toArray(),
+      db.collection("orders").find({ clientId }).sort({ createdAt: -1 }).toArray(),
+      db.collection("billing_entries").find({ clientId }).sort({ createdAt: -1 }).toArray(),
+    ]);
+    
+    const orderIds = orders.map(o => o.id || o._id?.toString() || "");
+    const designIds = orders.map(o => o.designId).filter(Boolean);
+    
+    const [orderFiles, designs, designImages] = await Promise.all([
+      db.collection("order_files").find({ orderId: { $in: orderIds } }).toArray(),
+      db.collection("designs").find({ id: { $in: designIds } }).toArray(),
+      db.collection("design_images").find({ designId: { $in: designIds } }).toArray(),
+    ]);
+    
+    const billingMap = new Map<string, BillingEntry[]>();
+    for (const b of billingEntries) {
+      const orderId = b.orderId;
+      if (!billingMap.has(orderId)) {
+        billingMap.set(orderId, []);
+      }
+      billingMap.get(orderId)!.push(toBillingEntry(b));
+    }
+    
+    const filesMap = new Map<string, OrderFile[]>();
+    for (const f of orderFiles) {
+      const orderId = f.orderId;
+      if (!filesMap.has(orderId)) {
+        filesMap.set(orderId, []);
+      }
+      filesMap.get(orderId)!.push(toOrderFile(f));
+    }
+    
+    const imagesMap = new Map<string, DesignImage[]>();
+    for (const img of designImages) {
+      const designId = img.designId;
+      if (!imagesMap.has(designId)) {
+        imagesMap.set(designId, []);
+      }
+      imagesMap.get(designId)!.push(toDesignImage(img));
+    }
+    
+    const designsMap = new Map(designs.map(d => [d.id || d._id?.toString() || "", toDesign(d)]));
+    
+    const orderDetails: OrderWithDetails[] = orders.map(o => {
+      const orderId = o.id || o._id?.toString() || "";
+      const design = designsMap.get(o.designId);
+      return {
+        ...toOrder(o),
+        client: toClient(client),
+        design: design ? {
+          ...design,
+          images: (imagesMap.get(o.designId) || []).sort((a, b) => a.sortOrder - b.sortOrder),
+        } : {} as any,
+        files: filesMap.get(orderId) || [],
+        billingEntries: billingMap.get(orderId) || [],
+        measurement: measurements.find(m => (m.id || m._id?.toString() || "") === o.measurementId) ? toMeasurement(measurements.find(m => (m.id || m._id?.toString() || "") === o.measurementId)) : undefined,
+      };
+    });
+    
+    const clientBilling = billingEntries.map(toBillingEntry);
+    const totalSpent = clientBilling
       .filter((e) => e.paid)
       .reduce((sum, e) => sum + parseFloat(e.amount), 0);
-    const outstandingBalance = client.billingEntries
+    const outstandingBalance = clientBilling
       .filter((e) => !e.paid)
       .reduce((sum, e) => sum + parseFloat(e.amount), 0);
-
-    return { ...client, totalSpent, outstandingBalance };
+    
+    return {
+      ...toClient(client),
+      measurements: measurements.map(toMeasurement),
+      orders: orderDetails,
+      billingEntries: clientBilling,
+      totalSpent,
+      outstandingBalance,
+    };
   }
 
   async getClientByPhone(phone: string): Promise<Client | undefined> {
-    const [client] = await db.select().from(clients).where(eq(clients.phone, phone));
-    return client;
+    const db = await this.getDb();
+    const doc = await db.collection("clients").findOne({ phone });
+    return doc ? toClient(doc) : undefined;
   }
 
   async createClient(client: InsertClient): Promise<Client> {
-    const [newClient] = await db.insert(clients).values(client).returning();
-    return newClient;
+    const db = await this.getDb();
+    const id = generateId();
+    const newClient = {
+      id,
+      ...client,
+      createdAt: new Date(),
+    };
+    await db.collection("clients").insertOne(newClient);
+    return toClient(newClient);
   }
 
   async updateClient(id: string, data: Partial<Client>): Promise<Client | undefined> {
-    const [updated] = await db.update(clients).set(data).where(eq(clients.id, id)).returning();
-    return updated;
+    const db = await this.getDb();
+    const result = await db.collection("clients").findOneAndUpdate(
+      { id },
+      { $set: data },
+      { returnDocument: "after" }
+    );
+    return result ? toClient(result) : undefined;
   }
 
   async deleteAllClients(): Promise<void> {
-    // Get all clients first to get their IDs
-    const allClients = await db.select().from(clients);
-    const clientIds = allClients.map(c => c.id);
-
+    const db = await this.getDb();
+    const allClients = await db.collection("clients").find({}).toArray();
+    const clientIds = allClients.map(c => c.id || c._id?.toString() || "");
+    
     if (clientIds.length === 0) {
       console.log("No clients to delete");
       return;
     }
-
+    
     console.log(`Starting deletion of ${clientIds.length} clients...`);
-
+    
     try {
-      // Get all orders for these clients
-      const allOrders = await db.select().from(orders).where(inArray(orders.clientId, clientIds));
-      const orderIds = allOrders.map(o => o.id);
+      const allOrders = await db.collection("orders").find({ clientId: { $in: clientIds } }).toArray();
+      const orderIds = allOrders.map(o => o.id || o._id?.toString() || "");
       console.log(`Found ${orderIds.length} orders to delete`);
-
-      // Delete billing entries for these orders first (they reference orderId)
+      
       if (orderIds.length > 0) {
-        const deletedBilling1 = await db.delete(billingEntries).where(inArray(billingEntries.orderId, orderIds));
-        console.log("Deleted billing entries for orders:", deletedBilling1);
+        await db.collection("billing_entries").deleteMany({ orderId: { $in: orderIds } });
+        await db.collection("order_files").deleteMany({ orderId: { $in: orderIds } });
       }
-
-      // Delete order files for these orders
-      if (orderIds.length > 0) {
-        const deletedFiles = await db.delete(orderFiles).where(inArray(orderFiles.orderId, orderIds));
-        console.log("Deleted order files:", deletedFiles);
-      }
-
-      // Delete orders
-      if (orderIds.length > 0) {
-        const deletedOrders = await db.delete(orders).where(inArray(orders.clientId, clientIds));
-        console.log("Deleted orders:", deletedOrders);
-      }
-
-      // Delete billing entries for these clients (any remaining ones)
-      const deletedBilling2 = await db.delete(billingEntries).where(inArray(billingEntries.clientId, clientIds));
-      console.log("Deleted billing entries for clients:", deletedBilling2);
-
-      // Delete measurements (should cascade, but being explicit)
-      const deletedMeasurements = await db.delete(measurements).where(inArray(measurements.clientId, clientIds));
-      console.log("Deleted measurements:", deletedMeasurements);
-
-      // Finally delete all clients
-      const deletedClients = await db.delete(clients);
-      console.log("Deleted all clients:", deletedClients);
+      
+      await db.collection("orders").deleteMany({ clientId: { $in: clientIds } });
+      await db.collection("billing_entries").deleteMany({ clientId: { $in: clientIds } });
+      await db.collection("measurements").deleteMany({ clientId: { $in: clientIds } });
+      await db.collection("clients").deleteMany({});
+      
       console.log("All clients deleted successfully");
     } catch (error) {
       console.error("Error during client deletion:", error);
@@ -314,125 +596,341 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getMeasurements(clientId: string): Promise<Measurement[]> {
-    return db.select().from(measurements).where(eq(measurements.clientId, clientId));
+    const db = await this.getDb();
+    const measurements = await db.collection("measurements")
+      .find({ clientId })
+      .sort({ createdAt: -1 })
+      .toArray();
+    return measurements.map(toMeasurement);
   }
 
   async createMeasurement(measurement: InsertMeasurement): Promise<Measurement> {
-    const [newMeasurement] = await db.insert(measurements).values(measurement).returning();
-    return newMeasurement;
+    const db = await this.getDb();
+    const id = generateId();
+    const newMeasurement = {
+      id,
+      ...measurement,
+      createdAt: new Date(),
+    };
+    await db.collection("measurements").insertOne(newMeasurement);
+    return toMeasurement(newMeasurement);
   }
 
   async updateMeasurement(id: string, data: Partial<Measurement>): Promise<Measurement | undefined> {
-    const [updated] = await db.update(measurements).set(data).where(eq(measurements.id, id)).returning();
-    return updated;
+    const db = await this.getDb();
+    const result = await db.collection("measurements").findOneAndUpdate(
+      { id },
+      { $set: data },
+      { returnDocument: "after" }
+    );
+    return result ? toMeasurement(result) : undefined;
   }
 
   async getOrders(): Promise<OrderWithDetails[]> {
-    const allOrders = await db.query.orders.findMany({
-      with: {
-        client: true,
-        design: { with: { images: true } },
-        files: true,
-        billingEntries: true,
-        measurement: true,
-      },
-      orderBy: desc(orders.createdAt),
+    const db = await this.getDb();
+    const orders = await db.collection("orders")
+      .find({})
+      .sort({ createdAt: -1 })
+      .toArray();
+    
+    const clientIds = [...new Set(orders.map(o => o.clientId))];
+    const designIds = [...new Set(orders.map(o => o.designId))];
+    const orderIds = orders.map(o => o.id || o._id?.toString() || "");
+    const measurementIds = orders.map(o => o.measurementId).filter(Boolean);
+    
+    const [clients, designs, orderFiles, billingEntries, measurements, designImages] = await Promise.all([
+      db.collection("clients").find({ id: { $in: clientIds } }).toArray(),
+      db.collection("designs").find({ id: { $in: designIds } }).toArray(),
+      db.collection("order_files").find({ orderId: { $in: orderIds } }).toArray(),
+      db.collection("billing_entries").find({ orderId: { $in: orderIds } }).toArray(),
+      db.collection("measurements").find({ id: { $in: measurementIds } }).toArray(),
+      db.collection("design_images").find({ designId: { $in: designIds } }).toArray(),
+    ]);
+    
+    const clientsMap = new Map(clients.map(c => [c.id || c._id?.toString() || "", toClient(c)]));
+    const designsMap = new Map(designs.map(d => [d.id || d._id?.toString() || "", toDesign(d)]));
+    const measurementsMap = new Map(measurements.map(m => [m.id || m._id?.toString() || "", toMeasurement(m)]));
+    
+    const filesMap = new Map<string, OrderFile[]>();
+    for (const f of orderFiles) {
+      const orderId = f.orderId;
+      if (!filesMap.has(orderId)) {
+        filesMap.set(orderId, []);
+      }
+      filesMap.get(orderId)!.push(toOrderFile(f));
+    }
+    
+    const billingMap = new Map<string, BillingEntry[]>();
+    for (const b of billingEntries) {
+      const orderId = b.orderId;
+      if (!billingMap.has(orderId)) {
+        billingMap.set(orderId, []);
+      }
+      billingMap.get(orderId)!.push(toBillingEntry(b));
+    }
+    
+    const imagesMap = new Map<string, DesignImage[]>();
+    for (const img of designImages) {
+      const designId = img.designId;
+      if (!imagesMap.has(designId)) {
+        imagesMap.set(designId, []);
+      }
+      imagesMap.get(designId)!.push(toDesignImage(img));
+    }
+    
+    return orders.map(o => {
+      const orderId = o.id || o._id?.toString() || "";
+      const design = designsMap.get(o.designId);
+      return {
+        ...toOrder(o),
+        client: clientsMap.get(o.clientId) || {} as Client,
+        design: design ? {
+          ...design,
+          images: (imagesMap.get(o.designId) || []).sort((a, b) => a.sortOrder - b.sortOrder),
+        } : {} as any,
+        files: filesMap.get(orderId) || [],
+        billingEntries: billingMap.get(orderId) || [],
+        measurement: o.measurementId ? measurementsMap.get(o.measurementId) : undefined,
+      };
     });
-    return allOrders as OrderWithDetails[];
   }
 
   async getOrder(id: string): Promise<OrderWithDetails | undefined> {
-    const order = await db.query.orders.findFirst({
-      where: eq(orders.id, id),
-      with: {
-        client: true,
-        design: { with: { images: true } },
-        files: true,
-        billingEntries: true,
-        measurement: true,
-      },
-    });
-    return order as OrderWithDetails | undefined;
+    const db = await this.getDb();
+    const order = await db.collection("orders").findOne({ id });
+    if (!order) return undefined;
+    
+    const [client, design, files, billingEntries, measurement] = await Promise.all([
+      db.collection("clients").findOne({ id: order.clientId }),
+      db.collection("designs").findOne({ id: order.designId }),
+      db.collection("order_files").find({ orderId: id }).toArray(),
+      db.collection("billing_entries").find({ orderId: id }).toArray(),
+      order.measurementId ? db.collection("measurements").findOne({ id: order.measurementId }) : null,
+    ]);
+    
+    const designImages = design ? await db.collection("design_images")
+      .find({ designId: design.id || design._id?.toString() || "" })
+      .sort({ sortOrder: 1 })
+      .toArray() : [];
+    
+    return {
+      ...toOrder(order),
+      client: client ? toClient(client) : {} as Client,
+      design: design ? {
+        ...toDesign(design),
+        images: designImages.map(toDesignImage),
+      } : {} as any,
+      files: files.map(toOrderFile),
+      billingEntries: billingEntries.map(toBillingEntry),
+      measurement: measurement ? toMeasurement(measurement) : undefined,
+    };
   }
 
   async getOrdersByClient(clientId: string): Promise<OrderWithDetails[]> {
-    const clientOrders = await db.query.orders.findMany({
-      where: eq(orders.clientId, clientId),
-      with: {
-        client: true,
-        design: { with: { images: true } },
-        files: true,
-        billingEntries: true,
-        measurement: true,
-      },
-      orderBy: desc(orders.createdAt),
+    const db = await this.getDb();
+    const orders = await db.collection("orders")
+      .find({ clientId })
+      .sort({ createdAt: -1 })
+      .toArray();
+    
+    if (orders.length === 0) return [];
+    
+    const designIds = [...new Set(orders.map(o => o.designId))];
+    const orderIds = orders.map(o => o.id || o._id?.toString() || "");
+    const measurementIds = orders.map(o => o.measurementId).filter(Boolean);
+    
+    const [client, designs, orderFiles, billingEntries, measurements, designImages] = await Promise.all([
+      db.collection("clients").findOne({ id: clientId }),
+      db.collection("designs").find({ id: { $in: designIds } }).toArray(),
+      db.collection("order_files").find({ orderId: { $in: orderIds } }).toArray(),
+      db.collection("billing_entries").find({ orderId: { $in: orderIds } }).toArray(),
+      db.collection("measurements").find({ id: { $in: measurementIds } }).toArray(),
+      db.collection("design_images").find({ designId: { $in: designIds } }).toArray(),
+    ]);
+    
+    const designsMap = new Map(designs.map(d => [d.id || d._id?.toString() || "", toDesign(d)]));
+    const measurementsMap = new Map(measurements.map(m => [m.id || m._id?.toString() || "", toMeasurement(m)]));
+    
+    const filesMap = new Map<string, OrderFile[]>();
+    for (const f of orderFiles) {
+      const orderId = f.orderId;
+      if (!filesMap.has(orderId)) {
+        filesMap.set(orderId, []);
+      }
+      filesMap.get(orderId)!.push(toOrderFile(f));
+    }
+    
+    const billingMap = new Map<string, BillingEntry[]>();
+    for (const b of billingEntries) {
+      const orderId = b.orderId;
+      if (!billingMap.has(orderId)) {
+        billingMap.set(orderId, []);
+      }
+      billingMap.get(orderId)!.push(toBillingEntry(b));
+    }
+    
+    const imagesMap = new Map<string, DesignImage[]>();
+    for (const img of designImages) {
+      const designId = img.designId;
+      if (!imagesMap.has(designId)) {
+        imagesMap.set(designId, []);
+      }
+      imagesMap.get(designId)!.push(toDesignImage(img));
+    }
+    
+    return orders.map(o => {
+      const orderId = o.id || o._id?.toString() || "";
+      const design = designsMap.get(o.designId);
+      return {
+        ...toOrder(o),
+        client: client ? toClient(client) : {} as Client,
+        design: design ? {
+          ...design,
+          images: (imagesMap.get(o.designId) || []).sort((a, b) => a.sortOrder - b.sortOrder),
+        } : {} as any,
+        files: filesMap.get(orderId) || [],
+        billingEntries: billingMap.get(orderId) || [],
+        measurement: o.measurementId ? measurementsMap.get(o.measurementId) : undefined,
+      };
     });
-    return clientOrders as OrderWithDetails[];
   }
 
   async createOrder(order: InsertOrder): Promise<Order> {
-    const [newOrder] = await db.insert(orders).values(order).returning();
-    return newOrder;
+    const db = await this.getDb();
+    const id = generateId();
+    const newOrder = {
+      id,
+      ...order,
+      status: order.status || "requested",
+      createdAt: new Date(),
+    };
+    await db.collection("orders").insertOne(newOrder);
+    return toOrder(newOrder);
   }
 
   async updateOrder(id: string, data: Partial<Order>): Promise<Order | undefined> {
-    const [updated] = await db.update(orders).set(data).where(eq(orders.id, id)).returning();
-    return updated;
+    const db = await this.getDb();
+    const result = await db.collection("orders").findOneAndUpdate(
+      { id },
+      { $set: data },
+      { returnDocument: "after" }
+    );
+    return result ? toOrder(result) : undefined;
   }
 
   async getOrderFiles(orderId: string): Promise<OrderFile[]> {
-    return db.select().from(orderFiles).where(eq(orderFiles.orderId, orderId));
+    const db = await this.getDb();
+    const files = await db.collection("order_files")
+      .find({ orderId })
+      .toArray();
+    return files.map(toOrderFile);
   }
 
   async createOrderFile(file: InsertOrderFile): Promise<OrderFile> {
-    const [newFile] = await db.insert(orderFiles).values(file).returning();
-    return newFile;
+    const db = await this.getDb();
+    const id = generateId();
+    const newFile = {
+      id,
+      ...file,
+      createdAt: new Date(),
+    };
+    await db.collection("order_files").insertOne(newFile);
+    return toOrderFile(newFile);
   }
 
   async getBillingEntries(orderId: string): Promise<BillingEntry[]> {
-    return db.select().from(billingEntries).where(eq(billingEntries.orderId, orderId));
+    const db = await this.getDb();
+    const entries = await db.collection("billing_entries")
+      .find({ orderId })
+      .toArray();
+    return entries.map(toBillingEntry);
   }
 
   async getBillingEntriesByClient(clientId: string): Promise<BillingEntry[]> {
-    return db.select().from(billingEntries).where(eq(billingEntries.clientId, clientId));
+    const db = await this.getDb();
+    const entries = await db.collection("billing_entries")
+      .find({ clientId })
+      .toArray();
+    return entries.map(toBillingEntry);
   }
 
   async createBillingEntry(entry: InsertBillingEntry): Promise<BillingEntry> {
-    const [newEntry] = await db.insert(billingEntries).values(entry).returning();
-    return newEntry;
+    const db = await this.getDb();
+    const id = generateId();
+    const newEntry = {
+      id,
+      ...entry,
+      paid: entry.paid ?? false,
+      createdAt: new Date(),
+    };
+    await db.collection("billing_entries").insertOne(newEntry);
+    return toBillingEntry(newEntry);
   }
 
   async updateBillingEntry(id: string, data: Partial<BillingEntry>): Promise<BillingEntry | undefined> {
-    const [updated] = await db.update(billingEntries).set(data).where(eq(billingEntries.id, id)).returning();
-    return updated;
+    const db = await this.getDb();
+    const result = await db.collection("billing_entries").findOneAndUpdate(
+      { id },
+      { $set: data },
+      { returnDocument: "after" }
+    );
+    return result ? toBillingEntry(result) : undefined;
   }
 
   async getNotifications(userId: string): Promise<Notification[]> {
-    return db.select().from(notifications)
-      .where(eq(notifications.userId, userId))
-      .orderBy(desc(notifications.createdAt));
+    const db = await this.getDb();
+    const notifications = await db.collection("notifications")
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+    return notifications.map(toNotification);
   }
 
   async createNotification(notification: InsertNotification): Promise<Notification> {
-    const [newNotification] = await db.insert(notifications).values(notification).returning();
-    return newNotification;
+    const db = await this.getDb();
+    const id = generateId();
+    const newNotification = {
+      id,
+      ...notification,
+      read: notification.read ?? false,
+      createdAt: new Date(),
+    };
+    await db.collection("notifications").insertOne(newNotification);
+    return toNotification(newNotification);
   }
 
   async markNotificationRead(id: string): Promise<void> {
-    await db.update(notifications).set({ read: true }).where(eq(notifications.id, id));
+    const db = await this.getDb();
+    await db.collection("notifications").updateOne(
+      { id },
+      { $set: { read: true } }
+    );
   }
 
   async getCategories(): Promise<Category[]> {
-    return db.select().from(categories).orderBy(categories.name);
+    const db = await this.getDb();
+    const categories = await db.collection("categories")
+      .find({})
+      .sort({ name: 1 })
+      .toArray();
+    return categories.map(toCategory);
   }
 
   async createCategory(category: InsertCategory): Promise<Category> {
-    const [newCategory] = await db.insert(categories).values(category).returning();
-    return newCategory;
+    const db = await this.getDb();
+    const id = generateId();
+    const newCategory = {
+      id,
+      ...category,
+      createdAt: new Date(),
+    };
+    await db.collection("categories").insertOne(newCategory);
+    return toCategory(newCategory);
   }
 
   async deleteCategory(id: string): Promise<void> {
-    await db.delete(categories).where(eq(categories.id, id));
+    const db = await this.getDb();
+    await db.collection("categories").deleteOne({ id });
   }
 
   async getDashboardStats(designerId: string): Promise<{

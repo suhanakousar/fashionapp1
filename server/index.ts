@@ -61,6 +61,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Initialize database connection before registering routes
+  const { connect } = await import("./db");
+  await connect();
+  
   await registerRoutes(httpServer, app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

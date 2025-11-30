@@ -1,252 +1,220 @@
-import { sql } from "drizzle-orm";
-import { pgTable, text, varchar, numeric, boolean, timestamp, integer, jsonb, pgEnum } from "drizzle-orm/pg-core";
-import { relations } from "drizzle-orm";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-export const orderStatusEnum = pgEnum("order_status", [
-  "requested",
-  "accepted",
-  "in_progress",
-  "ready_for_delivery",
-  "delivered"
-]);
+// Helper function to generate IDs (compatible with MongoDB ObjectId format)
+export const generateId = () => {
+  // Generate a 24-character hex string similar to MongoDB ObjectId
+  const timestamp = Math.floor(Date.now() / 1000).toString(16);
+  const random = Array.from({ length: 16 }, () => 
+    Math.floor(Math.random() * 16).toString(16)
+  ).join('');
+  return (timestamp + random).slice(0, 24);
+};
 
-export const users = pgTable("users", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  email: text("email").notNull().unique(),
-  password: text("password").notNull(),
-  role: text("role").notNull().default("designer"),
-  businessName: text("business_name"),
-  businessPhone: text("business_phone"),
-  businessAddress: text("business_address"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+// Order status type
+export type OrderStatus = "requested" | "accepted" | "in_progress" | "ready_for_delivery" | "delivered";
+
+// Type definitions for MongoDB documents
+export interface User {
+  _id?: string;
+  id: string;
+  name: string;
+  email: string;
+  password: string;
+  role: string;
+  businessName?: string;
+  businessPhone?: string;
+  businessAddress?: string;
+  createdAt: Date;
+}
+
+export interface Design {
+  _id?: string;
+  id: string;
+  designerId: string;
+  title: string;
+  description?: string;
+  price: string;
+  category: string;
+  isPublished: boolean;
+  createdAt: Date;
+}
+
+export interface DesignImage {
+  _id?: string;
+  id: string;
+  designId: string;
+  imageUrl: string;
+  sortOrder: number;
+  createdAt: Date;
+}
+
+export interface Client {
+  _id?: string;
+  id: string;
+  name: string;
+  phone: string;
+  whatsapp?: string;
+  email?: string;
+  address?: string;
+  createdAt: Date;
+}
+
+export interface Measurement {
+  _id?: string;
+  id: string;
+  clientId: string;
+  label: string;
+  chest?: string;
+  waist?: string;
+  hips?: string;
+  shoulder?: string;
+  sleeve?: string;
+  length?: string;
+  inseam?: string;
+  neck?: string;
+  customMeasurements?: Record<string, string>;
+  notes?: string;
+  createdAt: Date;
+}
+
+export interface Order {
+  _id?: string;
+  id: string;
+  clientId: string;
+  designId: string;
+  designerId: string;
+  status: OrderStatus;
+  preferredDate?: Date;
+  notes?: string;
+  measurementId?: string;
+  createdAt: Date;
+}
+
+export interface OrderFile {
+  _id?: string;
+  id: string;
+  orderId: string;
+  fileUrl: string;
+  fileType: string;
+  fileName?: string;
+  createdAt: Date;
+}
+
+export interface BillingEntry {
+  _id?: string;
+  id: string;
+  orderId: string;
+  clientId: string;
+  description: string;
+  amount: string;
+  paid: boolean;
+  createdAt: Date;
+}
+
+export interface Notification {
+  _id?: string;
+  id: string;
+  userId: string;
+  type: string;
+  title: string;
+  message: string;
+  read: boolean;
+  metadata?: Record<string, unknown>;
+  createdAt: Date;
+}
+
+export interface Category {
+  _id?: string;
+  id: string;
+  name: string;
+  createdAt: Date;
+}
+
+// Zod schemas for validation
+export const insertUserSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  password: z.string().min(6),
+  role: z.string().default("designer"),
+  businessName: z.string().optional(),
+  businessPhone: z.string().optional(),
+  businessAddress: z.string().optional(),
 });
 
-export const designs = pgTable("designs", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  designerId: varchar("designer_id").notNull().references(() => users.id),
-  title: text("title").notNull(),
-  description: text("description"),
-  price: numeric("price", { precision: 10, scale: 2 }).notNull(),
-  category: text("category").notNull(),
-  isPublished: boolean("is_published").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertDesignSchema = z.object({
+  designerId: z.string(),
+  title: z.string().min(1),
+  description: z.string().optional(),
+  price: z.string(),
+  category: z.string().min(1),
+  isPublished: z.boolean().default(false),
 });
 
-export const designImages = pgTable("design_images", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  designId: varchar("design_id").notNull().references(() => designs.id, { onDelete: "cascade" }),
-  imageUrl: text("image_url").notNull(),
-  sortOrder: integer("sort_order").default(0).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertDesignImageSchema = z.object({
+  designId: z.string(),
+  imageUrl: z.string().url(),
+  sortOrder: z.number().default(0),
 });
 
-export const clients = pgTable("clients", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull(),
-  phone: text("phone").notNull(),
-  whatsapp: text("whatsapp"),
-  email: text("email"),
-  address: text("address"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertClientSchema = z.object({
+  name: z.string().min(1),
+  phone: z.string().min(1),
+  whatsapp: z.string().optional(),
+  email: z.string().email().optional(),
+  address: z.string().optional(),
 });
 
-export const measurements = pgTable("measurements", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: "cascade" }),
-  label: text("label").notNull(),
-  chest: numeric("chest", { precision: 6, scale: 2 }),
-  waist: numeric("waist", { precision: 6, scale: 2 }),
-  hips: numeric("hips", { precision: 6, scale: 2 }),
-  shoulder: numeric("shoulder", { precision: 6, scale: 2 }),
-  sleeve: numeric("sleeve", { precision: 6, scale: 2 }),
-  length: numeric("length", { precision: 6, scale: 2 }),
-  inseam: numeric("inseam", { precision: 6, scale: 2 }),
-  neck: numeric("neck", { precision: 6, scale: 2 }),
-  customMeasurements: jsonb("custom_measurements").$type<Record<string, string>>(),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertMeasurementSchema = z.object({
+  clientId: z.string(),
+  label: z.string().min(1),
+  chest: z.string().optional(),
+  waist: z.string().optional(),
+  hips: z.string().optional(),
+  shoulder: z.string().optional(),
+  sleeve: z.string().optional(),
+  length: z.string().optional(),
+  inseam: z.string().optional(),
+  neck: z.string().optional(),
+  customMeasurements: z.record(z.string()).optional(),
+  notes: z.string().optional(),
 });
 
-export const orders = pgTable("orders", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  clientId: varchar("client_id").notNull().references(() => clients.id),
-  designId: varchar("design_id").notNull().references(() => designs.id),
-  designerId: varchar("designer_id").notNull().references(() => users.id),
-  status: orderStatusEnum("status").default("requested").notNull(),
-  preferredDate: timestamp("preferred_date"),
-  notes: text("notes"),
-  measurementId: varchar("measurement_id").references(() => measurements.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertOrderSchema = z.object({
+  clientId: z.string(),
+  designId: z.string(),
+  designerId: z.string(),
+  status: z.enum(["requested", "accepted", "in_progress", "ready_for_delivery", "delivered"]).default("requested"),
+  preferredDate: z.date().optional(),
+  notes: z.string().optional(),
+  measurementId: z.string().optional(),
 });
 
-export const orderFiles = pgTable("order_files", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  orderId: varchar("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-  fileUrl: text("file_url").notNull(),
-  fileType: text("file_type").notNull(),
-  fileName: text("file_name"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertOrderFileSchema = z.object({
+  orderId: z.string(),
+  fileUrl: z.string().url(),
+  fileType: z.string().min(1),
+  fileName: z.string().optional(),
 });
 
-export const billingEntries = pgTable("billing_entries", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  orderId: varchar("order_id").notNull().references(() => orders.id, { onDelete: "cascade" }),
-  clientId: varchar("client_id").notNull().references(() => clients.id),
-  description: text("description").notNull(),
-  amount: numeric("amount", { precision: 10, scale: 2 }).notNull(),
-  paid: boolean("paid").default(false).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertBillingEntrySchema = z.object({
+  orderId: z.string(),
+  clientId: z.string(),
+  description: z.string().min(1),
+  amount: z.string(),
+  paid: z.boolean().default(false),
 });
 
-export const notifications = pgTable("notifications", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  type: text("type").notNull(),
-  title: text("title").notNull(),
-  message: text("message").notNull(),
-  read: boolean("read").default(false).notNull(),
-  metadata: jsonb("metadata").$type<Record<string, unknown>>(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertNotificationSchema = z.object({
+  userId: z.string(),
+  type: z.string().min(1),
+  title: z.string().min(1),
+  message: z.string().min(1),
+  read: z.boolean().default(false),
+  metadata: z.record(z.unknown()).optional(),
 });
 
-export const categories = pgTable("categories", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  name: text("name").notNull().unique(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const usersRelations = relations(users, ({ many }) => ({
-  designs: many(designs),
-  orders: many(orders),
-  notifications: many(notifications),
-}));
-
-export const designsRelations = relations(designs, ({ one, many }) => ({
-  designer: one(users, {
-    fields: [designs.designerId],
-    references: [users.id],
-  }),
-  images: many(designImages),
-  orders: many(orders),
-}));
-
-export const designImagesRelations = relations(designImages, ({ one }) => ({
-  design: one(designs, {
-    fields: [designImages.designId],
-    references: [designs.id],
-  }),
-}));
-
-export const clientsRelations = relations(clients, ({ many }) => ({
-  measurements: many(measurements),
-  orders: many(orders),
-  billingEntries: many(billingEntries),
-}));
-
-export const measurementsRelations = relations(measurements, ({ one }) => ({
-  client: one(clients, {
-    fields: [measurements.clientId],
-    references: [clients.id],
-  }),
-}));
-
-export const ordersRelations = relations(orders, ({ one, many }) => ({
-  client: one(clients, {
-    fields: [orders.clientId],
-    references: [clients.id],
-  }),
-  design: one(designs, {
-    fields: [orders.designId],
-    references: [designs.id],
-  }),
-  designer: one(users, {
-    fields: [orders.designerId],
-    references: [users.id],
-  }),
-  measurement: one(measurements, {
-    fields: [orders.measurementId],
-    references: [measurements.id],
-  }),
-  files: many(orderFiles),
-  billingEntries: many(billingEntries),
-}));
-
-export const orderFilesRelations = relations(orderFiles, ({ one }) => ({
-  order: one(orders, {
-    fields: [orderFiles.orderId],
-    references: [orders.id],
-  }),
-}));
-
-export const billingEntriesRelations = relations(billingEntries, ({ one }) => ({
-  order: one(orders, {
-    fields: [billingEntries.orderId],
-    references: [orders.id],
-  }),
-  client: one(clients, {
-    fields: [billingEntries.clientId],
-    references: [clients.id],
-  }),
-}));
-
-export const notificationsRelations = relations(notifications, ({ one }) => ({
-  user: one(users, {
-    fields: [notifications.userId],
-    references: [users.id],
-  }),
-}));
-
-export const insertUserSchema = createInsertSchema(users).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertDesignSchema = createInsertSchema(designs).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertDesignImageSchema = createInsertSchema(designImages).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertClientSchema = createInsertSchema(clients).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertMeasurementSchema = createInsertSchema(measurements).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertOrderSchema = createInsertSchema(orders).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertOrderFileSchema = createInsertSchema(orderFiles).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertBillingEntrySchema = createInsertSchema(billingEntries).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertNotificationSchema = createInsertSchema(notifications).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const insertCategorySchema = createInsertSchema(categories).omit({
-  id: true,
-  createdAt: true,
+export const insertCategorySchema = z.object({
+  name: z.string().min(1),
 });
 
 export const loginSchema = z.object({
@@ -271,25 +239,15 @@ export const bookingFormSchema = z.object({
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type User = typeof users.$inferSelect;
 export type InsertDesign = z.infer<typeof insertDesignSchema>;
-export type Design = typeof designs.$inferSelect;
 export type InsertDesignImage = z.infer<typeof insertDesignImageSchema>;
-export type DesignImage = typeof designImages.$inferSelect;
 export type InsertClient = z.infer<typeof insertClientSchema>;
-export type Client = typeof clients.$inferSelect;
 export type InsertMeasurement = z.infer<typeof insertMeasurementSchema>;
-export type Measurement = typeof measurements.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
-export type Order = typeof orders.$inferSelect;
 export type InsertOrderFile = z.infer<typeof insertOrderFileSchema>;
-export type OrderFile = typeof orderFiles.$inferSelect;
 export type InsertBillingEntry = z.infer<typeof insertBillingEntrySchema>;
-export type BillingEntry = typeof billingEntries.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
-export type Notification = typeof notifications.$inferSelect;
 export type InsertCategory = z.infer<typeof insertCategorySchema>;
-export type Category = typeof categories.$inferSelect;
 export type BookingFormData = z.infer<typeof bookingFormSchema>;
 
 export type DesignWithImages = Design & { images: DesignImage[] };

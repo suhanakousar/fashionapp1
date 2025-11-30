@@ -97,18 +97,26 @@ export async function registerRoutes(
   app.post("/api/auth/login", async (req, res) => {
     try {
       const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email and password are required" });
+      }
+
       const user = await storage.getUserByEmail(email);
 
       if (!user) {
+        console.log(`Login attempt failed: User not found for email: ${email}`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       const isValid = await bcrypt.compare(password, user.password);
       if (!isValid) {
+        console.log(`Login attempt failed: Invalid password for email: ${email}`);
         return res.status(401).json({ message: "Invalid credentials" });
       }
 
       req.session.userId = user.id;
+      console.log(`Login successful for user: ${user.email}`);
       res.json({ user: { ...user, password: undefined } });
     } catch (error) {
       console.error("Login error:", error);

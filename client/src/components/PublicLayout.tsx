@@ -3,6 +3,7 @@ import { Menu, X } from "lucide-react";
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "./ThemeToggle";
+import { PWAInstallButton } from "./PWAInstallButton";
 
 export function PublicLayout({ children }: { children: React.ReactNode }) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -60,6 +61,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   Contact
                 </span>
               </Link>
+              <PWAInstallButton />
               <ThemeToggle />
               <Link href="/admin/login" data-testid="link-admin-login">
                 <Button variant="outline" size="sm">
