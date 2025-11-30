@@ -34,7 +34,7 @@ import {
   type OrderWithDetails,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, and, sql, ilike, or } from "drizzle-orm";
+import { eq, desc, and, sql, ilike, or, inArray } from "drizzle-orm";
 
 export interface IStorage {
   getUser(id: string): Promise<User | undefined>;
@@ -59,6 +59,7 @@ export interface IStorage {
   getClientByPhone(phone: string): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, data: Partial<Client>): Promise<Client | undefined>;
+  deleteAllClients(): Promise<void>;
 
   getMeasurements(clientId: string): Promise<Measurement[]>;
   createMeasurement(measurement: InsertMeasurement): Promise<Measurement>;
@@ -145,6 +146,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteDesign(id: string): Promise<void> {
+    // Delete related records first due to foreign key constraints
+    // Get all orders for this design
+    const designOrders = await db.select().from(orders).where(eq(orders.designId, id));
+    
+    // Delete billing entries for these orders
+    for (const order of designOrders) {
+      await db.delete(billingEntries).where(eq(billingEntries.orderId, order.id));
+      // Delete order files
+      await db.delete(orderFiles).where(eq(orderFiles.orderId, order.id));
+    }
+    
+    // Delete orders
+    await db.delete(orders).where(eq(orders.designId, id));
+    
+    // Delete design images (should cascade, but being explicit)
+    await db.delete(designImages).where(eq(designImages.designId, id));
+    
+    // Finally delete the design
     await db.delete(designs).where(eq(designs.id, id));
   }
 
@@ -238,6 +257,60 @@ export class DatabaseStorage implements IStorage {
   async updateClient(id: string, data: Partial<Client>): Promise<Client | undefined> {
     const [updated] = await db.update(clients).set(data).where(eq(clients.id, id)).returning();
     return updated;
+  }
+
+  async deleteAllClients(): Promise<void> {
+    // Get all clients first to get their IDs
+    const allClients = await db.select().from(clients);
+    const clientIds = allClients.map(c => c.id);
+
+    if (clientIds.length === 0) {
+      console.log("No clients to delete");
+      return;
+    }
+
+    console.log(`Starting deletion of ${clientIds.length} clients...`);
+
+    try {
+      // Get all orders for these clients
+      const allOrders = await db.select().from(orders).where(inArray(orders.clientId, clientIds));
+      const orderIds = allOrders.map(o => o.id);
+      console.log(`Found ${orderIds.length} orders to delete`);
+
+      // Delete billing entries for these orders first (they reference orderId)
+      if (orderIds.length > 0) {
+        const deletedBilling1 = await db.delete(billingEntries).where(inArray(billingEntries.orderId, orderIds));
+        console.log("Deleted billing entries for orders:", deletedBilling1);
+      }
+
+      // Delete order files for these orders
+      if (orderIds.length > 0) {
+        const deletedFiles = await db.delete(orderFiles).where(inArray(orderFiles.orderId, orderIds));
+        console.log("Deleted order files:", deletedFiles);
+      }
+
+      // Delete orders
+      if (orderIds.length > 0) {
+        const deletedOrders = await db.delete(orders).where(inArray(orders.clientId, clientIds));
+        console.log("Deleted orders:", deletedOrders);
+      }
+
+      // Delete billing entries for these clients (any remaining ones)
+      const deletedBilling2 = await db.delete(billingEntries).where(inArray(billingEntries.clientId, clientIds));
+      console.log("Deleted billing entries for clients:", deletedBilling2);
+
+      // Delete measurements (should cascade, but being explicit)
+      const deletedMeasurements = await db.delete(measurements).where(inArray(measurements.clientId, clientIds));
+      console.log("Deleted measurements:", deletedMeasurements);
+
+      // Finally delete all clients
+      const deletedClients = await db.delete(clients);
+      console.log("Deleted all clients:", deletedClients);
+      console.log("All clients deleted successfully");
+    } catch (error) {
+      console.error("Error during client deletion:", error);
+      throw error;
+    }
   }
 
   async getMeasurements(clientId: string): Promise<Measurement[]> {

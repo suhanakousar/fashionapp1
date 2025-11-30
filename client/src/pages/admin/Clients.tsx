@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link } from "wouter";
 import {
   Search,
@@ -9,6 +9,7 @@ import {
   DollarSign,
   ChevronRight,
   Download,
+  Trash2,
 } from "lucide-react";
 import { SiWhatsapp } from "react-icons/si";
 import { Button } from "@/components/ui/button";
@@ -19,14 +20,42 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { AdminLayout } from "@/components/AdminLayout";
 import { PageLoader } from "@/components/LoadingSpinner";
 import { EmptyState } from "@/components/EmptyState";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import type { ClientWithDetails } from "@shared/schema";
 import { format } from "date-fns";
 
 export default function Clients() {
   const [searchQuery, setSearchQuery] = useState("");
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const { toast } = useToast();
 
   const { data: clients = [], isLoading } = useQuery<ClientWithDetails[]>({
     queryKey: ["/api/admin/clients"],
+  });
+
+  const deleteAllMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest("DELETE", "/api/admin/clients/all");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/clients"] });
+      toast({ title: "All clients deleted successfully" });
+      setShowDeleteDialog(false);
+    },
+    onError: () => {
+      toast({ title: "Failed to delete clients", variant: "destructive" });
+    },
   });
 
   const filteredClients = clients.filter(
@@ -58,15 +87,28 @@ export default function Clients() {
               {clients.length} total clients
             </p>
           </div>
-          <Button
-            variant="outline"
-            className="gap-2"
-            onClick={exportClientsCSV}
-            data-testid="button-export"
-          >
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
+          <div className="flex gap-2">
+            {clients.length > 0 && (
+              <Button
+                variant="destructive"
+                className="gap-2"
+                onClick={() => setShowDeleteDialog(true)}
+                data-testid="button-delete-all"
+              >
+                <Trash2 className="h-4 w-4" />
+                Delete All
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              className="gap-2"
+              onClick={exportClientsCSV}
+              data-testid="button-export"
+            >
+              <Download className="h-4 w-4" />
+              Export CSV
+            </Button>
+          </div>
         </div>
 
         <div className="relative max-w-md">
@@ -122,7 +164,7 @@ export default function Clients() {
                               variant="outline"
                               className="bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400 border-transparent text-xs"
                             >
-                              ${client.outstandingBalance.toLocaleString()} due
+                              ₹{client.outstandingBalance.toLocaleString()} due
                             </Badge>
                           )}
                         </div>
@@ -148,7 +190,7 @@ export default function Clients() {
                         <div className="text-center">
                           <p className="text-muted-foreground">Total Spent</p>
                           <p className="font-semibold text-green-600 dark:text-green-400">
-                            ${client.totalSpent?.toLocaleString() || 0}
+                            ₹{client.totalSpent?.toLocaleString() || 0}
                           </p>
                         </div>
                         <div className="text-center">
@@ -160,7 +202,7 @@ export default function Clients() {
                                 : "text-muted-foreground"
                             }`}
                           >
-                            ${client.outstandingBalance?.toLocaleString() || 0}
+                            ₹{client.outstandingBalance?.toLocaleString() || 0}
                           </p>
                         </div>
                       </div>
@@ -195,7 +237,7 @@ export default function Clients() {
                       <div>
                         <p className="text-muted-foreground">Total</p>
                         <p className="font-semibold text-green-600 dark:text-green-400">
-                          ${client.totalSpent?.toLocaleString() || 0}
+                          ₹{client.totalSpent?.toLocaleString() || 0}
                         </p>
                       </div>
                       <div>
@@ -207,7 +249,7 @@ export default function Clients() {
                               : "text-muted-foreground"
                           }`}
                         >
-                          ${client.outstandingBalance?.toLocaleString() || 0}
+                          ₹{client.outstandingBalance?.toLocaleString() || 0}
                         </p>
                       </div>
                     </div>
@@ -217,6 +259,27 @@ export default function Clients() {
             ))}
           </div>
         )}
+
+        <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete All Clients</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete all {clients.length} clients? This will also delete all their orders, measurements, and billing entries. This action cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() => deleteAllMutation.mutate()}
+                disabled={deleteAllMutation.isPending}
+              >
+                {deleteAllMutation.isPending ? "Deleting..." : "Delete All"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AdminLayout>
   );

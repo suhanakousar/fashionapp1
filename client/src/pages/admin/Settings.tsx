@@ -42,9 +42,9 @@ export default function Settings() {
 
   const businessForm = useForm({
     defaultValues: {
-      businessName: user?.businessName || "Atelier Studio",
-      businessPhone: user?.businessPhone || "",
-      businessAddress: user?.businessAddress || "",
+      businessName: user?.businessName || "Rajiya Fashion",
+      businessPhone: user?.businessPhone || "9182720386",
+      businessAddress: user?.businessAddress || "D.No. 7/394, Rayachur Street, Main Bazar, Tadipatri-515411",
     },
   });
 
@@ -140,7 +140,7 @@ export default function Settings() {
                     <FormItem>
                       <FormLabel>Phone Number</FormLabel>
                       <FormControl>
-                        <Input placeholder="+1 (555) 123-4567" {...field} />
+                        <Input placeholder="9182720386" {...field} />
                       </FormControl>
                       <FormDescription>
                         Used for WhatsApp integration

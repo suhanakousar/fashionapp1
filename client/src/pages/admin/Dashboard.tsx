@@ -122,7 +122,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 <div className="text-3xl font-bold">
-                  ${dashboardData.pendingPayments.toLocaleString()}
+                  ₹{dashboardData.pendingPayments.toLocaleString()}
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Outstanding balance

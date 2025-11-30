@@ -34,7 +34,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-between h-16 md:h-20">
             <Link href="/" data-testid="link-home">
               <span className="font-serif text-xl md:text-2xl font-semibold tracking-tight cursor-pointer">
-                Atelier Studio
+                Rajiya Fashion
               </span>
             </Link>
 
@@ -110,7 +110,7 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-              <h3 className="font-serif text-xl font-semibold mb-4">Atelier Studio</h3>
+              <h3 className="font-serif text-xl font-semibold mb-4">Rajiya Fashion</h3>
               <p className="text-sm text-muted-foreground leading-relaxed">
                 Bespoke fashion designs crafted with passion and precision. 
                 Each piece tells a unique story.
@@ -139,14 +139,14 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
             <div>
               <h4 className="font-medium mb-4">Contact</h4>
               <div className="space-y-2 text-sm text-muted-foreground">
-                <p>hello@atelierstudio.com</p>
-                <p>+1 (555) 123-4567</p>
-                <p>123 Fashion Ave, New York, NY</p>
+                <p>Phone: 9182720386</p>
+                <p>D.No. 7/394, Rayachur Street</p>
+                <p>Main Bazar, Tadipatri-515411</p>
               </div>
             </div>
           </div>
           <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-            <p>&copy; {new Date().getFullYear()} Atelier Studio. All rights reserved.</p>
+            <p>&copy; {new Date().getFullYear()} Rajiya Fashion. All rights reserved.</p>
           </div>
         </div>
       </footer>

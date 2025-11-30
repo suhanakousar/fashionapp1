@@ -8,6 +8,8 @@ import { AuthProvider } from "@/lib/auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import Home from "@/pages/Home";
+import About from "@/pages/About";
+import Contact from "@/pages/Contact";
 import DesignDetail from "@/pages/DesignDetail";
 import Booking from "@/pages/Booking";
 import BookingConfirmation from "@/pages/BookingConfirmation";
@@ -27,6 +29,8 @@ function Router() {
     <Switch>
       {/* Public Routes */}
       <Route path="/" component={Home} />
+      <Route path="/about" component={About} />
+      <Route path="/contact" component={Contact} />
       <Route path="/design/:id" component={DesignDetail} />
       <Route path="/book/:designId" component={Booking} />
       <Route path="/booking/confirm/:orderId" component={BookingConfirmation} />

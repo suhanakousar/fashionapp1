@@ -62,7 +62,7 @@ export default function Login() {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="font-serif text-2xl font-semibold mb-2">
-            Atelier Studio
+            Rajiya Fashion
           </div>
           <CardTitle className="text-xl">Designer Login</CardTitle>
           <CardDescription>
@@ -143,13 +143,6 @@ export default function Login() {
               </Button>
             </form>
           </Form>
-
-          <div className="mt-6 text-center text-sm text-muted-foreground">
-            <p>Demo credentials:</p>
-            <p className="font-mono text-xs mt-1">
-              designer@atelier.com / password123
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

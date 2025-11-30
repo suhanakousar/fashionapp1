@@ -192,7 +192,7 @@ export default function Orders() {
                           <div className="text-center">
                             <p className="text-muted-foreground">Total</p>
                             <p className="font-semibold">
-                              ${orderTotal.toLocaleString()}
+                              ₹{orderTotal.toLocaleString()}
                             </p>
                           </div>
                           {orderTotal > 0 && (
@@ -205,7 +205,7 @@ export default function Orders() {
                                     : "text-green-600 dark:text-green-400"
                                 }`}
                               >
-                                ${(orderTotal - paidAmount).toLocaleString()}
+                                ₹{(orderTotal - paidAmount).toLocaleString()}
                               </p>
                             </div>
                           )}
@@ -226,7 +226,7 @@ export default function Orders() {
                         <div>
                           <p className="text-muted-foreground">Total</p>
                           <p className="font-semibold">
-                            ${orderTotal.toLocaleString()}
+                            ₹{orderTotal.toLocaleString()}
                           </p>
                         </div>
                         <div>
@@ -238,7 +238,7 @@ export default function Orders() {
                                 : "text-green-600 dark:text-green-400"
                             }`}
                           >
-                            ${(orderTotal - paidAmount).toLocaleString()}
+                            ₹{(orderTotal - paidAmount).toLocaleString()}
                           </p>
                         </div>
                       </div>

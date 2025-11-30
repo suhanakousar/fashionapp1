@@ -74,7 +74,7 @@ export default function BookingConfirmation() {
       `\nPlease confirm my booking. Thank you!`
   );
 
-  const designerPhone = "15551234567";
+  const designerPhone = "919182720386";
 
   return (
     <PublicLayout>
@@ -118,7 +118,7 @@ export default function BookingConfirmation() {
                   {order.design?.category}
                 </p>
                 <p className="text-lg font-bold text-primary mt-2">
-                  ${order.design?.price ? parseFloat(order.design.price).toLocaleString() : "0"}
+                  ₹{order.design?.price ? parseFloat(order.design.price).toLocaleString() : "0"}
                 </p>
               </div>
             </div>

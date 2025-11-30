@@ -178,7 +178,7 @@ export default function Designs() {
                             {design.category}
                           </Badge>
                           <span className="text-sm font-semibold text-primary">
-                            ${parseFloat(design.price).toLocaleString()}
+                            ₹{parseFloat(design.price).toLocaleString()}
                           </span>
                         </div>
                         <p className="text-xs text-muted-foreground mt-2">

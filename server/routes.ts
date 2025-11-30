@@ -313,7 +313,7 @@ export async function registerRoutes(
         description: description || null,
         price,
         category,
-        isPublished: isPublished === "true",
+        isPublished: isPublished === "true" || isPublished === true,
       });
 
       const files = req.files as Express.Multer.File[];
@@ -329,22 +329,26 @@ export async function registerRoutes(
 
       const fullDesign = await storage.getDesign(design.id);
       res.json({ design: fullDesign });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Create design error:", error);
-      res.status(500).json({ message: "Failed to create design" });
+      const message = error?.message || "Failed to create design";
+      res.status(500).json({ message });
     }
   });
 
   app.put("/api/admin/designs/:id", requireAuth, upload.array("newImages", 10), async (req, res) => {
     try {
       const { title, description, price, category, isPublished, imageOrder } = req.body;
+      
+      // Handle isPublished as both string and boolean
+      const isPublishedValue = isPublished === "true" || isPublished === true;
 
       await storage.updateDesign(req.params.id, {
         title,
         description: description || null,
         price,
         category,
-        isPublished: isPublished === "true",
+        isPublished: isPublishedValue,
       });
 
       if (imageOrder) {
@@ -371,9 +375,10 @@ export async function registerRoutes(
 
       const fullDesign = await storage.getDesign(req.params.id);
       res.json({ design: fullDesign });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Update design error:", error);
-      res.status(500).json({ message: "Failed to update design" });
+      const message = error?.message || "Failed to update design";
+      res.status(500).json({ message });
     }
   });
 
@@ -391,9 +396,10 @@ export async function registerRoutes(
     try {
       await storage.deleteDesign(req.params.id);
       res.json({ message: "Design deleted" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Delete design error:", error);
-      res.status(500).json({ message: "Failed to delete design" });
+      const message = error?.message || "Failed to delete design";
+      res.status(500).json({ message });
     }
   });
 
@@ -404,6 +410,21 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Error fetching clients:", error);
       res.status(500).json({ message: "Failed to fetch clients" });
+    }
+  });
+
+  // This route must come BEFORE /api/admin/clients/:id to avoid matching "all" as an ID
+  app.delete("/api/admin/clients/all", requireAuth, async (req, res) => {
+    try {
+      console.log("Starting delete all clients operation...");
+      await storage.deleteAllClients();
+      console.log("Delete all clients completed successfully");
+      res.json({ message: "All clients deleted successfully" });
+    } catch (error: any) {
+      console.error("Delete all clients error:", error);
+      console.error("Error stack:", error?.stack);
+      const message = error?.message || "Failed to delete all clients";
+      res.status(500).json({ message });
     }
   });
 
@@ -686,10 +707,11 @@ export async function registerRoutes(
       doc.text("INVOICE", pageWidth / 2, 30, { align: "center" });
 
       doc.setFontSize(12);
-      doc.text("Atelier Studio", 20, 50);
+      doc.text("Rajiya Fashion", 20, 50);
       doc.setFontSize(10);
-      doc.text("123 Fashion Ave, New York, NY", 20, 58);
-      doc.text("hello@atelierstudio.com", 20, 65);
+      doc.text("D.No. 7/394, Rayachur Street, Main Bazar", 20, 58);
+      doc.text("Tadipatri-515411", 20, 65);
+      doc.text("Phone: 9182720386", 20, 72);
 
       doc.setFontSize(10);
       doc.text(`Invoice #: ${order.id.slice(0, 8).toUpperCase()}`, pageWidth - 70, 50);
@@ -725,7 +747,7 @@ export async function registerRoutes(
 
       for (const entry of order.billingEntries || []) {
         doc.text(entry.description, 20, y);
-        doc.text(`$${parseFloat(entry.amount).toFixed(2)}`, pageWidth - 50, y, { align: "right" });
+        doc.text(`₹${parseFloat(entry.amount).toFixed(2)}`, pageWidth - 50, y, { align: "right" });
         doc.text(entry.paid ? "Paid" : "Pending", pageWidth - 20, y, { align: "right" });
         total += parseFloat(entry.amount);
         if (entry.paid) paid += parseFloat(entry.amount);
@@ -738,13 +760,13 @@ export async function registerRoutes(
 
       doc.setFont(undefined, "bold");
       doc.text("Total:", pageWidth - 80, y);
-      doc.text(`$${total.toFixed(2)}`, pageWidth - 20, y, { align: "right" });
+      doc.text(`₹${total.toFixed(2)}`, pageWidth - 20, y, { align: "right" });
       y += 8;
       doc.text("Paid:", pageWidth - 80, y);
-      doc.text(`$${paid.toFixed(2)}`, pageWidth - 20, y, { align: "right" });
+      doc.text(`₹${paid.toFixed(2)}`, pageWidth - 20, y, { align: "right" });
       y += 8;
       doc.text("Balance Due:", pageWidth - 80, y);
-      doc.text(`$${(total - paid).toFixed(2)}`, pageWidth - 20, y, { align: "right" });
+      doc.text(`₹${(total - paid).toFixed(2)}`, pageWidth - 20, y, { align: "right" });
 
       y += 30;
       doc.setFont(undefined, "normal");

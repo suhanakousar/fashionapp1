@@ -59,7 +59,7 @@ function AppSidebar() {
       <SidebarHeader className="border-b border-sidebar-border p-4">
         <Link href="/admin/dashboard" data-testid="link-admin-home">
           <span className="font-serif text-xl font-semibold cursor-pointer">
-            Atelier Studio
+            Rajiya Fashion
           </span>
         </Link>
         <span className="text-xs text-muted-foreground mt-1">Admin Portal</span>

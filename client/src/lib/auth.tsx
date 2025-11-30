@@ -35,7 +35,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string) => {
     const response = await apiRequest("POST", "/api/auth/login", { email, password });
-    setUser(response.user);
+    const data = await response.json();
+    if (!data.user) {
+      throw new Error("Login failed: Invalid response");
+    }
+    setUser(data.user);
   };
 
   const logout = async () => {

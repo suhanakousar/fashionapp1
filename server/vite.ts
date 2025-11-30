@@ -18,14 +18,22 @@ export async function setupVite(server: Server, app: Express) {
   const vite = await createViteServer({
     ...viteConfig,
     configFile: false,
+    root: viteConfig.root,
     customLogger: {
       ...viteLogger,
       error: (msg, options) => {
+        // Don't exit on Vite errors, just log them
         viteLogger.error(msg, options);
-        process.exit(1);
       },
     },
-    server: serverOptions,
+    server: {
+      ...serverOptions,
+      fs: {
+        strict: true,
+        deny: ["**/.*"],
+        allow: [path.resolve(import.meta.dirname, "..")],
+      },
+    },
     appType: "custom",
   });
 
@@ -33,6 +41,11 @@ export async function setupVite(server: Server, app: Express) {
 
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+
+    // Skip API routes - they should be handled by Express routes
+    if (url.startsWith("/api/")) {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(

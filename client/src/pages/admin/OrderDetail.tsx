@@ -302,7 +302,7 @@ export default function OrderDetail() {
                       {order.design?.category}
                     </Badge>
                     <p className="text-xl font-bold text-primary mt-2">
-                      ${order.design?.price ? parseFloat(order.design.price).toLocaleString() : 0}
+                      ₹{order.design?.price ? parseFloat(order.design.price).toLocaleString() : 0}
                     </p>
                   </div>
                   <Link href={`/design/${order.design?.id}`}>
@@ -457,7 +457,7 @@ export default function OrderDetail() {
                         </div>
                         <div className="flex items-center gap-4">
                           <p className="font-semibold text-lg">
-                            ${parseFloat(entry.amount).toLocaleString()}
+                            ₹{parseFloat(entry.amount).toLocaleString()}
                           </p>
                           <div className="flex items-center gap-2">
                             <Switch
@@ -481,13 +481,13 @@ export default function OrderDetail() {
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Total</span>
                         <span className="font-medium">
-                          ${orderTotal.toLocaleString()}
+                          ₹{orderTotal.toLocaleString()}
                         </span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Paid</span>
                         <span className="font-medium text-green-600 dark:text-green-400">
-                          ${paidAmount.toLocaleString()}
+                          ₹{paidAmount.toLocaleString()}
                         </span>
                       </div>
                       <Separator />
@@ -500,7 +500,7 @@ export default function OrderDetail() {
                               : "text-green-600 dark:text-green-400"
                           }`}
                         >
-                          ${outstandingBalance.toLocaleString()}
+                          ₹{outstandingBalance.toLocaleString()}
                         </span>
                       </div>
                     </div>

@@ -287,7 +287,7 @@ export default function Booking() {
                             <FormLabel>Phone Number *</FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="+1 (555) 123-4567"
+                                placeholder="9182720386"
                                 {...field}
                                 data-testid="input-phone"
                               />
@@ -656,7 +656,7 @@ export default function Booking() {
                   {design.category}
                 </p>
                 <p className="text-xl font-bold text-primary mt-3">
-                  ${parseFloat(design.price).toLocaleString()}
+                  ₹{parseFloat(design.price).toLocaleString()}
                 </p>
               </CardContent>
             </Card>

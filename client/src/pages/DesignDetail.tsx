@@ -78,7 +78,7 @@ export default function DesignDetail() {
                 className="text-3xl font-bold text-primary"
                 data-testid="text-design-price"
               >
-                ${parseFloat(design.price).toLocaleString()}
+                ₹{parseFloat(design.price).toLocaleString()}
               </p>
             </div>
 

@@ -43,7 +43,7 @@ import { insertDesignSchema } from "@shared/schema";
 import { cn } from "@/lib/utils";
 import { z } from "zod";
 
-const formSchema = insertDesignSchema.extend({
+const formSchema = insertDesignSchema.omit({ designerId: true }).extend({
   title: z.string().min(1, "Title is required"),
   price: z.string().min(1, "Price is required"),
   category: z.string().min(1, "Category is required"),
@@ -153,7 +153,12 @@ export default function DesignEditor() {
       const formData = new FormData();
       Object.entries(data).forEach(([key, value]) => {
         if (value !== undefined && value !== null) {
-          formData.append(key, String(value));
+          // Handle boolean values properly
+          if (typeof value === "boolean") {
+            formData.append(key, value ? "true" : "false");
+          } else {
+            formData.append(key, String(value));
+          }
         }
       });
 
@@ -171,26 +176,32 @@ export default function DesignEditor() {
       const response = await fetch(url, {
         method: isNew ? "POST" : "PUT",
         body: formData,
+        credentials: "include",
       });
 
       if (!response.ok) {
-        const error = await response.json();
+        const error = await response.json().catch(() => ({ message: "Failed to save design" }));
         throw new Error(error.message || "Failed to save design");
       }
 
       return response.json();
     },
     onSuccess: (data) => {
+      setIsSubmitting(false);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/designs"] });
       toast({ title: isNew ? "Design created" : "Design updated" });
       navigate(`/admin/designs/${data.design?.id || designId}`);
     },
     onError: (error: Error) => {
+      setIsSubmitting(false);
       toast({ title: error.message, variant: "destructive" });
     },
   });
 
   const onSubmit = async (data: FormData) => {
+    console.log("Form submitted with data:", data);
+    console.log("Images:", images);
+    
     if (images.length === 0) {
       toast({
         title: "Please add at least one image",
@@ -198,8 +209,14 @@ export default function DesignEditor() {
       });
       return;
     }
+    
     setIsSubmitting(true);
-    saveMutation.mutate(data);
+    try {
+      saveMutation.mutate(data);
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setIsSubmitting(false);
+    }
   };
 
   if (!isNew && designLoading) {
@@ -245,7 +262,23 @@ export default function DesignEditor() {
         </div>
 
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+          <form 
+            onSubmit={form.handleSubmit(
+              onSubmit,
+              (errors) => {
+                console.log("Form validation errors:", errors);
+                const firstError = Object.values(errors)[0];
+                if (firstError?.message) {
+                  toast({
+                    title: "Validation error",
+                    description: firstError.message,
+                    variant: "destructive",
+                  });
+                }
+              }
+            )} 
+            className="space-y-6"
+          >
             <Card>
               <CardHeader>
                 <CardTitle>Images</CardTitle>
@@ -351,7 +384,7 @@ export default function DesignEditor() {
                         <FormControl>
                           <div className="relative">
                             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                              $
+                              ₹
                             </span>
                             <Input
                               type="number"

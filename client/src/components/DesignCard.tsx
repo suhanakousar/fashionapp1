@@ -40,7 +40,7 @@ export function DesignCard({ design }: DesignCardProps) {
             </Badge>
           </div>
           <p className="text-lg font-semibold text-primary">
-            ${parseFloat(design.price).toLocaleString()}
+            ₹{parseFloat(design.price).toLocaleString()}
           </p>
           {design.description && (
             <p className="text-sm text-muted-foreground line-clamp-2">

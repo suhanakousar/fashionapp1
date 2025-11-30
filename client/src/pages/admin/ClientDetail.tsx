@@ -232,7 +232,7 @@ export default function ClientDetail() {
               <div className="grid grid-cols-2 gap-4 text-center">
                 <div>
                   <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-                    ${client.totalSpent?.toLocaleString() || 0}
+                    ₹{client.totalSpent?.toLocaleString() || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Total Spent</p>
                 </div>
@@ -244,7 +244,7 @@ export default function ClientDetail() {
                         : "text-muted-foreground"
                     }`}
                   >
-                    ${client.outstandingBalance?.toLocaleString() || 0}
+                    ₹{client.outstandingBalance?.toLocaleString() || 0}
                   </p>
                   <p className="text-sm text-muted-foreground">Outstanding</p>
                 </div>
@@ -460,7 +460,7 @@ export default function ClientDetail() {
                             </div>
                             <div className="flex items-center gap-3">
                               <p className="font-semibold">
-                                ${parseFloat(entry.amount).toLocaleString()}
+                                ₹{parseFloat(entry.amount).toLocaleString()}
                               </p>
                               <Badge
                                 variant={entry.paid ? "secondary" : "outline"}
@@ -481,7 +481,7 @@ export default function ClientDetail() {
                         <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                           <p className="font-semibold">Outstanding Balance</p>
                           <p className="text-xl font-bold text-primary">
-                            ${client.outstandingBalance?.toLocaleString() || 0}
+                            ₹{client.outstandingBalance?.toLocaleString() || 0}
                           </p>
                         </div>
                       </div>
