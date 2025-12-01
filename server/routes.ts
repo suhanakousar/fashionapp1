@@ -876,6 +876,154 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/clients/:clientId/billing/invoice", requireAuth, async (req, res) => {
+    try {
+      const client = await storage.getClient(req.params.clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const billingEntries = await storage.getBillingEntriesByClient(req.params.clientId);
+      if (!billingEntries || billingEntries.length === 0) {
+        return res.status(404).json({ message: "No billing entries found" });
+      }
+
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
+      let y = 30;
+
+      doc.setFontSize(24);
+      doc.text("BILLING STATEMENT", pageWidth / 2, y, { align: "center" });
+      y += 15;
+
+      doc.setFontSize(12);
+      doc.text("Rajiya Fashion", 20, y);
+      doc.setFontSize(10);
+      doc.text("D.No. 7/394, Rayachur Street, Main Bazar", 20, y + 8);
+      doc.text("Tadipatri-515411", 20, y + 15);
+      doc.text("Phone: 9182720386", 20, y + 22);
+
+      doc.setFontSize(10);
+      doc.text(`Statement Date: ${new Date().toLocaleDateString()}`, pageWidth - 70, y);
+      doc.text(`Client ID: ${client.id.slice(0, 8).toUpperCase()}`, pageWidth - 70, y + 8);
+
+      y += 35;
+      doc.setFontSize(12);
+      doc.text("Bill To:", 20, y);
+      doc.setFontSize(10);
+      doc.text(client.name || "", 20, y + 8);
+      doc.text(client.phone || "", 20, y + 15);
+      if (client.email) {
+        doc.text(client.email, 20, y + 22);
+      }
+      if (client.address) {
+        doc.text(client.address, 20, y + 29);
+      }
+
+      y += 45;
+      doc.setFontSize(10);
+      doc.setDrawColor(200);
+      doc.line(20, y, pageWidth - 20, y);
+      y += 5;
+
+      doc.setFont(undefined, "bold");
+      doc.text("Date", 20, y);
+      doc.text("Description", 60, y);
+      doc.text("Amount", pageWidth - 50, y, { align: "right" });
+      doc.text("Status", pageWidth - 20, y, { align: "right" });
+      y += 5;
+      doc.line(20, y, pageWidth - 20, y);
+      y += 8;
+
+      doc.setFont(undefined, "normal");
+      let total = 0;
+      let paid = 0;
+
+      // Get orders for billing entries to show order info
+      const orderIds = [...new Set(billingEntries.map(e => e.orderId).filter(Boolean))];
+      const ordersMap = new Map();
+      if (orderIds.length > 0) {
+        for (const orderId of orderIds) {
+          try {
+            const order = await storage.getOrder(orderId);
+            if (order) ordersMap.set(orderId, order);
+          } catch (e) {
+            // Ignore errors
+          }
+        }
+      }
+
+      for (const entry of billingEntries) {
+        // Check if we need a new page
+        if (y > pageHeight - 40) {
+          doc.addPage();
+          y = 30;
+        }
+
+        const entryDate = new Date(entry.createdAt).toLocaleDateString();
+        doc.text(entryDate, 20, y);
+        
+        let description = entry.description;
+        if (entry.orderId && ordersMap.has(entry.orderId)) {
+          const order = ordersMap.get(entry.orderId);
+          description += ` (Order: ${order.design?.title || "N/A"})`;
+        }
+        
+        // Truncate description if too long
+        if (description.length > 50) {
+          description = description.substring(0, 47) + "...";
+        }
+        doc.text(description, 60, y);
+        
+        doc.text(`₹${parseFloat(entry.amount).toFixed(2)}`, pageWidth - 50, y, { align: "right" });
+        doc.text(entry.paid ? "Paid" : "Pending", pageWidth - 20, y, { align: "right" });
+        
+        total += parseFloat(entry.amount);
+        if (entry.paid) paid += parseFloat(entry.amount);
+        y += 8;
+      }
+
+      // Check if we need a new page for summary
+      if (y > pageHeight - 50) {
+        doc.addPage();
+        y = 30;
+      }
+
+      y += 5;
+      doc.line(20, y, pageWidth - 20, y);
+      y += 10;
+
+      doc.setFont(undefined, "bold");
+      doc.text("Summary", 20, y);
+      y += 10;
+
+      doc.setFont(undefined, "normal");
+      doc.text("Total Amount:", pageWidth - 80, y);
+      doc.text(`₹${total.toFixed(2)}`, pageWidth - 20, y, { align: "right" });
+      y += 8;
+      doc.text("Total Paid:", pageWidth - 80, y);
+      doc.text(`₹${paid.toFixed(2)}`, pageWidth - 20, y, { align: "right" });
+      y += 8;
+      doc.setFont(undefined, "bold");
+      doc.text("Outstanding Balance:", pageWidth - 80, y);
+      doc.text(`₹${(total - paid).toFixed(2)}`, pageWidth - 20, y, { align: "right" });
+
+      y += 20;
+      doc.setFont(undefined, "normal");
+      doc.setFontSize(9);
+      doc.text("Thank you for your business!", pageWidth / 2, y, { align: "center" });
+
+      const pdfBuffer = doc.output("arraybuffer");
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=billing-statement-${client.id.slice(0, 8)}.pdf`);
+      res.send(Buffer.from(pdfBuffer));
+    } catch (error) {
+      console.error("Billing statement generation error:", error);
+      res.status(500).json({ message: "Failed to generate billing statement" });
+    }
+  });
+
   app.get("/api/admin/billing/:id/invoice", requireAuth, async (req, res) => {
     try {
       // Get billing entry from database

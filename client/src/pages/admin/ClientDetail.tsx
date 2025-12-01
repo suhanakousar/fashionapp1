@@ -434,8 +434,22 @@ export default function ClientDetail() {
 
               <TabsContent value="billing" className="mt-4">
                 <Card>
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between">
                     <CardTitle className="text-lg">Billing Ledger</CardTitle>
+                    {client.billingEntries && client.billingEntries.length > 0 && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => {
+                          window.open(`/api/admin/clients/${clientId}/billing/invoice`, "_blank");
+                        }}
+                        data-testid="button-download-all-invoices"
+                      >
+                        <Download className="h-4 w-4" />
+                        Download All
+                      </Button>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {!client.billingEntries || client.billingEntries.length === 0 ? (
