@@ -47,6 +47,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { WhatsAppSendDialog } from "@/components/WhatsAppSendDialog";
 import type { ClientWithDetails, Measurement } from "@shared/schema";
 import { format } from "date-fns";
 
@@ -58,6 +59,7 @@ export default function ClientDetail() {
 
   const [measurementDialog, setMeasurementDialog] = useState(false);
   const [editingMeasurement, setEditingMeasurement] = useState<Measurement | null>(null);
+  const [whatsappDialog, setWhatsappDialog] = useState(false);
 
   const { data: client, isLoading } = useQuery<ClientWithDetails>({
     queryKey: ["/api/admin/clients", clientId],
@@ -252,17 +254,14 @@ export default function ClientDetail() {
 
               <Separator className="my-6" />
 
-              <a
-                href={`https://wa.me/${whatsappNumber?.replace(/\D/g, "")}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-whatsapp"
+              <Button
+                className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                onClick={() => setWhatsappDialog(true)}
+                data-testid="button-whatsapp"
               >
-                <Button className="w-full gap-2 bg-green-600 hover:bg-green-700">
-                  <SiWhatsapp className="h-4 w-4" />
-                  Message on WhatsApp
-                </Button>
-              </a>
+                <SiWhatsapp className="h-4 w-4" />
+                Send WhatsApp Message
+              </Button>
             </CardContent>
           </Card>
 
@@ -656,6 +655,14 @@ export default function ClientDetail() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <WhatsAppSendDialog
+        open={whatsappDialog}
+        onOpenChange={setWhatsappDialog}
+        clientId={client.id}
+        clientName={client.name}
+        clientPhone={whatsappNumber || client.phone}
+      />
     </AdminLayout>
   );
 }

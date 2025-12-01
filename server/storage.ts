@@ -19,6 +19,10 @@ import {
   type InsertNotification,
   type Category,
   type InsertCategory,
+  type Message,
+  type InsertMessage,
+  type WhatsAppMessage,
+  type InsertWhatsAppMessage,
   type DesignWithImages,
   type ClientWithDetails,
   type OrderWithDetails,
@@ -86,6 +90,20 @@ export interface IStorage {
     recentOrders: OrderWithDetails[];
     upcomingDeliveries: OrderWithDetails[];
   }>;
+
+  // Client authentication
+  getClientByPhone(phone: string): Promise<Client | undefined>;
+  updateClient(id: string, data: Partial<Client>): Promise<Client | undefined>;
+
+  // Messages
+  getMessages(clientId: string, designerId: string): Promise<Message[]>;
+  createMessage(message: InsertMessage): Promise<Message>;
+  markMessageRead(id: string): Promise<void>;
+  getUnreadMessageCount(clientId: string, designerId: string): Promise<number>;
+
+  // WhatsApp messages
+  createWhatsAppMessage(message: InsertWhatsAppMessage): Promise<WhatsAppMessage>;
+  getWhatsAppMessages(clientId: string): Promise<WhatsAppMessage[]>;
 }
 
 // Helper function to convert MongoDB document to our type
@@ -134,6 +152,35 @@ function toClient(doc: any): Client {
     whatsapp: doc.whatsapp,
     email: doc.email,
     address: doc.address,
+    password: doc.password,
+    otp: doc.otp,
+    otpExpires: doc.otpExpires,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toMessage(doc: any): Message {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    clientId: doc.clientId,
+    designerId: doc.designerId,
+    orderId: doc.orderId,
+    sender: doc.sender,
+    message: doc.message,
+    read: doc.read ?? false,
+    createdAt: doc.createdAt || new Date(),
+  };
+}
+
+function toWhatsAppMessage(doc: any): WhatsAppMessage {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    clientId: doc.clientId,
+    orderId: doc.orderId,
+    phone: doc.phone,
+    message: doc.message,
+    status: doc.status || "pending",
+    sentAt: doc.sentAt,
     createdAt: doc.createdAt || new Date(),
   };
 }
@@ -967,6 +1014,68 @@ export class DatabaseStorage implements IStorage {
       recentOrders,
       upcomingDeliveries,
     };
+  }
+
+  async getMessages(clientId: string, designerId: string): Promise<Message[]> {
+    const db = await this.getDb();
+    const messages = await db.collection("messages")
+      .find({ clientId, designerId })
+      .sort({ createdAt: 1 })
+      .toArray();
+    return messages.map(toMessage);
+  }
+
+  async createMessage(message: InsertMessage): Promise<Message> {
+    const db = await this.getDb();
+    const id = generateId();
+    const newMessage = {
+      id,
+      ...message,
+      read: message.read ?? false,
+      createdAt: new Date(),
+    };
+    await db.collection("messages").insertOne(newMessage);
+    return toMessage(newMessage);
+  }
+
+  async markMessageRead(id: string): Promise<void> {
+    const db = await this.getDb();
+    await db.collection("messages").updateOne(
+      { id },
+      { $set: { read: true } }
+    );
+  }
+
+  async getUnreadMessageCount(clientId: string, designerId: string): Promise<number> {
+    const db = await this.getDb();
+    return await db.collection("messages").countDocuments({
+      clientId,
+      designerId,
+      sender: "client",
+      read: false,
+    });
+  }
+
+  async createWhatsAppMessage(message: InsertWhatsAppMessage): Promise<WhatsAppMessage> {
+    const db = await this.getDb();
+    const id = generateId();
+    const newMessage = {
+      id,
+      ...message,
+      status: message.status || "pending",
+      createdAt: new Date(),
+    };
+    await db.collection("whatsapp_messages").insertOne(newMessage);
+    return toWhatsAppMessage(newMessage);
+  }
+
+  async getWhatsAppMessages(clientId: string): Promise<WhatsAppMessage[]> {
+    const db = await this.getDb();
+    const messages = await db.collection("whatsapp_messages")
+      .find({ clientId })
+      .sort({ createdAt: -1 })
+      .toArray();
+    return messages.map(toWhatsAppMessage);
   }
 }
 

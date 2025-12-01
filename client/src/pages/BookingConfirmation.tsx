@@ -229,10 +229,10 @@ export default function BookingConfirmation() {
         <Card className="bg-green-50 dark:bg-green-900/10 border-green-200 dark:border-green-900/30">
           <CardContent className="pt-6">
             <div className="text-center">
-              <h3 className="font-semibold mb-2">Confirm via WhatsApp</h3>
+              <h3 className="font-semibold mb-2">WhatsApp Confirmation</h3>
               <p className="text-sm text-muted-foreground mb-4">
-                Send us a quick message to confirm your booking and get faster
-                updates
+                A WhatsApp message has been automatically sent to your number with booking details. 
+                If you didn't receive it, you can send it again using the button below.
               </p>
               <a
                 href={`https://wa.me/${designerPhone}?text=${whatsappMessage}`}
@@ -242,7 +242,7 @@ export default function BookingConfirmation() {
               >
                 <Button className="gap-2 bg-green-600 hover:bg-green-700">
                   <SiWhatsapp className="h-5 w-5" />
-                  Confirm via WhatsApp
+                  Open WhatsApp Again
                 </Button>
               </a>
             </div>

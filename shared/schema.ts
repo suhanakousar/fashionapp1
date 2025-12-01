@@ -56,6 +56,9 @@ export interface Client {
   whatsapp?: string;
   email?: string;
   address?: string;
+  password?: string; // For client portal login
+  otp?: string; // For OTP-based login
+  otpExpires?: Date; // OTP expiration
   createdAt: Date;
 }
 
@@ -127,6 +130,30 @@ export interface Category {
   _id?: string;
   id: string;
   name: string;
+  createdAt: Date;
+}
+
+export interface Message {
+  _id?: string;
+  id: string;
+  clientId: string;
+  designerId: string;
+  orderId?: string;
+  sender: "client" | "designer";
+  message: string;
+  read: boolean;
+  createdAt: Date;
+}
+
+export interface WhatsAppMessage {
+  _id?: string;
+  id: string;
+  clientId: string;
+  orderId?: string;
+  phone: string;
+  message: string;
+  status: "pending" | "sent" | "failed";
+  sentAt?: Date;
   createdAt: Date;
 }
 
@@ -216,6 +243,38 @@ export const insertNotificationSchema = z.object({
 export const insertCategorySchema = z.object({
   name: z.string().min(1),
 });
+
+export const insertMessageSchema = z.object({
+  clientId: z.string(),
+  designerId: z.string(),
+  orderId: z.string().optional(),
+  sender: z.enum(["client", "designer"]),
+  message: z.string().min(1),
+  read: z.boolean().default(false),
+});
+
+export const insertWhatsAppMessageSchema = z.object({
+  clientId: z.string(),
+  orderId: z.string().optional(),
+  phone: z.string().min(1),
+  message: z.string().min(1),
+  status: z.enum(["pending", "sent", "failed"]).default("pending"),
+});
+
+export const clientLoginSchema = z.object({
+  phone: z.string().min(10),
+  password: z.string().optional(),
+  otp: z.string().optional(),
+});
+
+export const requestOTPSchema = z.object({
+  phone: z.string().min(10),
+});
+
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type InsertWhatsAppMessage = z.infer<typeof insertWhatsAppMessageSchema>;
+export type ClientLoginData = z.infer<typeof clientLoginSchema>;
+export type RequestOTPData = z.infer<typeof requestOTPSchema>;
 
 export const loginSchema = z.object({
   email: z.string().email(),

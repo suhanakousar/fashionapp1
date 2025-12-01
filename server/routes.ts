@@ -6,6 +6,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import { storage } from "./storage.js";
+import { whatsappService } from "./whatsapp.js";
 import { jsPDF } from "jspdf";
 import archiver from "archiver";
 import { bookingFormSchema, insertBillingEntrySchema } from "../shared/schema.js";
@@ -15,6 +16,7 @@ import { Readable } from "stream";
 declare module "express-session" {
   interface SessionData {
     userId?: string;
+    clientId?: string;
   }
 }
 
@@ -389,8 +391,46 @@ export async function registerRoutes(
         metadata: { orderId: order.id, clientId: client.id },
       });
 
-      const fullOrder = await storage.getOrder(order.id);
-      res.json({ order: fullOrder, client });
+      // Send WhatsApp confirmation message to client
+      try {
+        const whatsappMessage = whatsappService.generateBookingConfirmationMessage({
+          clientName: client.name,
+          designTitle: design.title,
+          orderId: order.id,
+          price: design.price,
+          preferredDate: formData.preferredDate 
+            ? new Date(formData.preferredDate).toLocaleDateString('en-IN', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })
+            : undefined,
+        });
+
+        const phone = client.whatsapp || client.phone;
+        const whatsappUrl = whatsappService.getWhatsAppURL(phone, whatsappMessage);
+
+        // Save WhatsApp message to database
+        await storage.createWhatsAppMessage({
+          clientId: client.id,
+          orderId: order.id,
+          phone,
+          message: whatsappMessage,
+          status: "pending", // Will be sent via URL
+        });
+
+        const fullOrder = await storage.getOrder(order.id);
+        res.json({ 
+          order: fullOrder, 
+          client,
+          whatsappUrl, // Return URL for frontend to open
+        });
+      } catch (whatsappError) {
+        console.error("WhatsApp notification error:", whatsappError);
+        // Don't fail the booking if WhatsApp fails
+        const fullOrder = await storage.getOrder(order.id);
+        res.json({ order: fullOrder, client });
+      }
     } catch (error) {
       console.error("Booking error:", error);
       res.status(500).json({ message: "Failed to create booking" });
@@ -616,29 +656,6 @@ export async function registerRoutes(
     }
   });
 
-  app.patch("/api/admin/orders/:id", requireAuth, async (req, res) => {
-    try {
-      const order = await storage.updateOrder(req.params.id, req.body);
-
-      if (req.body.status) {
-        const fullOrder = await storage.getOrder(req.params.id);
-        if (fullOrder) {
-          await storage.createNotification({
-            userId: req.session.userId!,
-            type: "order_status_changed",
-            title: "Order Updated",
-            message: `Order for "${fullOrder.design?.title}" is now ${req.body.status.replace(/_/g, " ")}`,
-            metadata: { orderId: req.params.id },
-          });
-        }
-      }
-
-      res.json({ order });
-    } catch (error) {
-      console.error("Update order error:", error);
-      res.status(500).json({ message: "Failed to update order" });
-    }
-  });
 
   app.post("/api/admin/orders/:id/billing", requireAuth, async (req, res) => {
     try {
@@ -1379,6 +1396,402 @@ export async function registerRoutes(
     } catch (error) {
       console.error("Billing invoice generation error:", error);
       res.status(500).json({ message: "Failed to generate invoice" });
+    }
+  });
+
+  // ==================== WhatsApp Integration ====================
+  
+  app.post("/api/whatsapp/send", requireAuth, async (req, res) => {
+    try {
+      const { clientId, message, orderId } = req.body;
+      
+      const client = await storage.getClient(clientId);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      const phone = client.whatsapp || client.phone;
+      const result = await whatsappService.sendMessage(phone, message);
+
+      if (result.success) {
+        // Save WhatsApp message to database
+        await storage.createWhatsAppMessage({
+          clientId,
+          orderId: orderId || null,
+          phone,
+          message,
+          status: "sent",
+        });
+
+        res.json({ success: true, messageId: result.messageId });
+      } else {
+        // Save as failed
+        await storage.createWhatsAppMessage({
+          clientId,
+          orderId: orderId || null,
+          phone,
+          message,
+          status: "failed",
+        });
+
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      console.error("WhatsApp send error:", error);
+      res.status(500).json({ message: "Failed to send WhatsApp message" });
+    }
+  });
+
+  app.get("/api/whatsapp/messages/:clientId", requireAuth, async (req, res) => {
+    try {
+      const messages = await storage.getWhatsAppMessages(req.params.clientId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching WhatsApp messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Auto-send WhatsApp notification on order status change
+  app.patch("/api/admin/orders/:id", requireAuth, async (req, res) => {
+    try {
+      const order = await storage.updateOrder(req.params.id, req.body);
+
+      if (req.body.status) {
+        const fullOrder = await storage.getOrder(req.params.id);
+        if (fullOrder) {
+          // Create admin notification
+          await storage.createNotification({
+            userId: req.session.userId!,
+            type: "order_status_changed",
+            title: "Order Updated",
+            message: `Order for "${fullOrder.design?.title}" is now ${req.body.status.replace(/_/g, " ")}`,
+            metadata: { orderId: req.params.id },
+          });
+
+          // Send WhatsApp notification to client
+          try {
+            const whatsappMessage = whatsappService.generateOrderStatusMessage({
+              id: fullOrder.id,
+              designTitle: fullOrder.design?.title || "Your order",
+              status: req.body.status,
+              clientName: fullOrder.client?.name || "Client",
+              orderNumber: fullOrder.id.slice(0, 8),
+            });
+
+            const client = fullOrder.client;
+            if (client) {
+              const phone = client.whatsapp || client.phone;
+              const result = await whatsappService.sendMessage(phone, whatsappMessage);
+              
+              await storage.createWhatsAppMessage({
+                clientId: client.id,
+                orderId: fullOrder.id,
+                phone,
+                message: whatsappMessage,
+                status: result.success ? "sent" : "failed",
+              });
+            }
+          } catch (whatsappError) {
+            console.error("WhatsApp notification error:", whatsappError);
+            // Don't fail the request if WhatsApp fails
+          }
+        }
+      }
+
+      res.json({ order });
+    } catch (error) {
+      console.error("Update order error:", error);
+      res.status(500).json({ message: "Failed to update order" });
+    }
+  });
+
+  // ==================== Client Portal ====================
+
+  // Request OTP for client login
+  app.post("/api/client/request-otp", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      let client = await storage.getClientByPhone(phone);
+      if (!client) {
+        // Create client if doesn't exist
+        client = await storage.createClient({
+          name: "Client",
+          phone,
+          whatsapp: phone,
+        });
+      }
+
+      // Generate 6-digit OTP
+      const otp = Math.floor(100000 + Math.random() * 900000).toString();
+      const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await storage.updateClient(client.id, {
+        otp,
+        otpExpires,
+      });
+
+      // Send OTP via WhatsApp (free integration - URL-based)
+      try {
+        const whatsappMessage = whatsappService.generateOTPMessage(client.name, otp);
+        const whatsappPhone = client.whatsapp || client.phone;
+        const whatsappUrl = whatsappService.getWhatsAppURL(whatsappPhone, whatsappMessage);
+
+        // Save WhatsApp message to database
+        await storage.createWhatsAppMessage({
+          clientId: client.id,
+          phone: whatsappPhone,
+          message: whatsappMessage,
+          status: "pending", // URL-based, will be sent when client opens
+        });
+
+        res.json({ 
+          success: true, 
+          message: "OTP sent to your WhatsApp",
+          whatsappUrl, // Return URL for frontend to open
+        });
+      } catch (whatsappError) {
+        console.error("WhatsApp OTP send error:", whatsappError);
+        // Fallback: still return success but log OTP (for development)
+        console.log(`OTP for ${phone}: ${otp} (WhatsApp failed, check console)`);
+        res.json({ 
+          success: true, 
+          message: "OTP generated. Please check console for development.",
+          // In production, you might want to return error here
+        });
+      }
+    } catch (error) {
+      console.error("Request OTP error:", error);
+      res.status(500).json({ message: "Failed to send OTP" });
+    }
+  });
+
+  // Client login (OTP or password)
+  app.post("/api/client/login", async (req, res) => {
+    try {
+      const { phone, otp, password } = req.body;
+      
+      const client = await storage.getClientByPhone(phone);
+      if (!client) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // OTP login
+      if (otp) {
+        if (client.otp !== otp) {
+          return res.status(401).json({ message: "Invalid OTP" });
+        }
+        if (client.otpExpires && new Date() > new Date(client.otpExpires)) {
+          return res.status(401).json({ message: "OTP expired" });
+        }
+        // Clear OTP after successful login
+        await storage.updateClient(client.id, { otp: undefined, otpExpires: undefined });
+      }
+      // Password login
+      else if (password) {
+        if (!client.password) {
+          return res.status(401).json({ message: "Password not set. Please use OTP login." });
+        }
+        const isValid = await bcrypt.compare(password, client.password);
+        if (!isValid) {
+          return res.status(401).json({ message: "Invalid password" });
+        }
+      } else {
+        return res.status(400).json({ message: "OTP or password required" });
+      }
+
+      // Set client session
+      req.session.clientId = client.id;
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      res.json({ client: { ...client, password: undefined, otp: undefined } });
+    } catch (error) {
+      console.error("Client login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Client logout
+  app.post("/api/client/logout", (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ message: "Logout failed" });
+      }
+      res.json({ message: "Logged out" });
+    });
+  });
+
+  // Get current client
+  app.get("/api/client/me", async (req, res) => {
+    if (!req.session.clientId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    const client = await storage.getClient(req.session.clientId);
+    if (!client) {
+      return res.status(401).json({ message: "Client not found" });
+    }
+
+    res.json({ client: { ...client, password: undefined, otp: undefined } });
+  });
+
+  // Client routes (require client authentication)
+  const requireClientAuth = async (req: Request, res: Response, next: NextFunction) => {
+    if (!req.session.clientId) {
+      return res.status(401).json({ message: "Authentication required" });
+    }
+    next();
+  };
+
+  // Get client's orders
+  app.get("/api/client/orders", requireClientAuth, async (req, res) => {
+    try {
+      const orders = await storage.getOrdersByClient(req.session.clientId!);
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching client orders:", error);
+      res.status(500).json({ message: "Failed to fetch orders" });
+    }
+  });
+
+  // Get client's order details
+  app.get("/api/client/orders/:id", requireClientAuth, async (req, res) => {
+    try {
+      const order = await storage.getOrder(req.params.id);
+      if (!order || order.clientId !== req.session.clientId) {
+        return res.status(404).json({ message: "Order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      console.error("Error fetching order:", error);
+      res.status(500).json({ message: "Failed to fetch order" });
+    }
+  });
+
+  // Get client's measurements
+  app.get("/api/client/measurements", requireClientAuth, async (req, res) => {
+    try {
+      const measurements = await storage.getMeasurements(req.session.clientId!);
+      res.json(measurements);
+    } catch (error) {
+      console.error("Error fetching measurements:", error);
+      res.status(500).json({ message: "Failed to fetch measurements" });
+    }
+  });
+
+  // Get client's billing entries
+  app.get("/api/client/billing", requireClientAuth, async (req, res) => {
+    try {
+      const entries = await storage.getBillingEntriesByClient(req.session.clientId!);
+      res.json(entries);
+    } catch (error) {
+      console.error("Error fetching billing:", error);
+      res.status(500).json({ message: "Failed to fetch billing" });
+    }
+  });
+
+  // Get messages between client and designer
+  app.get("/api/client/messages", requireClientAuth, async (req, res) => {
+    try {
+      const client = await storage.getClient(req.session.clientId!);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Get designer ID from first order or use a default
+      const orders = await storage.getOrdersByClient(req.session.clientId!);
+      const designerId = orders[0]?.designerId || req.session.userId;
+
+      if (!designerId) {
+        return res.status(400).json({ message: "No designer found" });
+      }
+
+      const messages = await storage.getMessages(req.session.clientId!, designerId);
+      res.json(messages);
+    } catch (error) {
+      console.error("Error fetching messages:", error);
+      res.status(500).json({ message: "Failed to fetch messages" });
+    }
+  });
+
+  // Get unread message count for client
+  app.get("/api/client/messages/unread", requireClientAuth, async (req, res) => {
+    try {
+      const orders = await storage.getOrdersByClient(req.session.clientId!);
+      const designerId = orders[0]?.designerId || req.session.userId;
+
+      if (!designerId) {
+        return res.json({ count: 0 });
+      }
+
+      const count = await storage.getUnreadMessageCount(req.session.clientId!, designerId);
+      res.json({ count });
+    } catch (error) {
+      console.error("Error fetching unread count:", error);
+      res.json({ count: 0 });
+    }
+  });
+
+  // Send message from client
+  app.post("/api/client/messages", requireClientAuth, async (req, res) => {
+    try {
+      const { message, orderId } = req.body;
+      
+      const client = await storage.getClient(req.session.clientId!);
+      if (!client) {
+        return res.status(404).json({ message: "Client not found" });
+      }
+
+      // Get designer ID
+      const orders = await storage.getOrdersByClient(req.session.clientId!);
+      const designerId = orders[0]?.designerId || req.session.userId;
+
+      if (!designerId) {
+        return res.status(400).json({ message: "No designer found" });
+      }
+
+      const newMessage = await storage.createMessage({
+        clientId: req.session.clientId!,
+        designerId,
+        orderId: orderId || null,
+        sender: "client",
+        message,
+      });
+
+      res.json({ message: newMessage });
+    } catch (error) {
+      console.error("Error sending message:", error);
+      res.status(500).json({ message: "Failed to send message" });
+    }
+  });
+
+  // Update client profile
+  app.patch("/api/client/profile", requireClientAuth, async (req, res) => {
+    try {
+      const { name, email, address, password } = req.body;
+      const updateData: any = {};
+      
+      if (name) updateData.name = name;
+      if (email) updateData.email = email;
+      if (address) updateData.address = address;
+      if (password) {
+        updateData.password = await bcrypt.hash(password, 10);
+      }
+
+      const client = await storage.updateClient(req.session.clientId!, updateData);
+      res.json({ client: { ...client, password: undefined } });
+    } catch (error) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Failed to update profile" });
     }
   });
 

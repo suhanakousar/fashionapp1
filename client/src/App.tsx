@@ -22,6 +22,11 @@ import ClientDetail from "@/pages/admin/ClientDetail";
 import Orders from "@/pages/admin/Orders";
 import OrderDetail from "@/pages/admin/OrderDetail";
 import Settings from "@/pages/admin/Settings";
+import ClientLogin from "@/pages/client/Login";
+import ClientDashboard from "@/pages/client/Dashboard";
+import ClientOrders from "@/pages/client/Orders";
+import ClientOrderDetail from "@/pages/client/OrderDetail";
+import ClientMessages from "@/pages/client/Messages";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -79,6 +84,13 @@ function Router() {
           <Settings />
         </ProtectedRoute>
       </Route>
+      
+      {/* Client Portal Routes */}
+      <Route path="/client/login" component={ClientLogin} />
+      <Route path="/client/dashboard" component={ClientDashboard} />
+      <Route path="/client/orders" component={ClientOrders} />
+      <Route path="/client/orders/:id" component={ClientOrderDetail} />
+      <Route path="/client/messages" component={ClientMessages} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />

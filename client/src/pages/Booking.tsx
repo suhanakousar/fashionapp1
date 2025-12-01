@@ -98,6 +98,17 @@ export default function Booking() {
       return response.json();
     },
     onSuccess: (data) => {
+      // Automatically open WhatsApp with confirmation message
+      if (data.whatsappUrl) {
+        // Open WhatsApp in a new window/tab
+        window.open(data.whatsappUrl, "_blank");
+        
+        // Also show a toast notification
+        toast({
+          title: "Booking confirmed!",
+          description: "WhatsApp message opened. Please send it to confirm your booking.",
+        });
+      }
       navigate(`/booking/confirm/${data.order.id}`);
     },
     onError: (error: Error) => {

@@ -52,6 +52,7 @@ import { EmptyState } from "@/components/EmptyState";
 import { StatusBadge } from "@/components/StatusBadge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { WhatsAppSendDialog } from "@/components/WhatsAppSendDialog";
 import type { OrderWithDetails, BillingEntry } from "@shared/schema";
 import { ORDER_STATUS_LABELS } from "@shared/schema";
 import { format } from "date-fns";
@@ -71,6 +72,7 @@ export default function OrderDetail() {
   const { toast } = useToast();
 
   const [billingDialog, setBillingDialog] = useState(false);
+  const [whatsappDialog, setWhatsappDialog] = useState(false);
 
   const { data: order, isLoading } = useQuery<OrderWithDetails>({
     queryKey: ["/api/admin/orders", orderId],
@@ -264,17 +266,15 @@ export default function OrderDetail() {
                 </SelectContent>
               </Select>
 
-              <a
-                href={`https://wa.me/${whatsappNumber?.replace(/\D/g, "")}?text=${whatsappMessage}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                data-testid="link-whatsapp"
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() => setWhatsappDialog(true)}
+                data-testid="button-whatsapp"
               >
-                <Button variant="outline" className="gap-2">
-                  <SiWhatsapp className="h-4 w-4" />
-                  Contact Client
-                </Button>
-              </a>
+                <SiWhatsapp className="h-4 w-4" />
+                Send WhatsApp Message
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -668,6 +668,16 @@ export default function OrderDetail() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      <WhatsAppSendDialog
+        open={whatsappDialog}
+        onOpenChange={setWhatsappDialog}
+        clientId={order.client?.id || ""}
+        clientName={order.client?.name || "Client"}
+        clientPhone={whatsappNumber || order.client?.phone || ""}
+        orderId={order.id}
+        defaultMessage={whatsappMessage ? decodeURIComponent(whatsappMessage) : undefined}
+      />
     </AdminLayout>
   );
 }
