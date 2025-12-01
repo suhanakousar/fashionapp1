@@ -76,6 +76,29 @@ export async function registerRoutes(
   httpServer: Server,
   app: Express
 ): Promise<Server> {
+  // CORS middleware for cross-origin requests (needed when frontend and backend are on different domains)
+  const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_API_URL?.replace('/api', '') || '';
+  app.use((req, res, next) => {
+    if (frontendUrl) {
+      res.setHeader('Access-Control-Allow-Origin', frontendUrl);
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    } else {
+      // If no frontend URL is set, allow all origins (for development or same-domain deployment)
+      res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+      res.setHeader('Access-Control-Allow-Credentials', 'true');
+      res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
+      res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    }
+    
+    // Handle preflight requests
+    if (req.method === 'OPTIONS') {
+      return res.sendStatus(200);
+    }
+    next();
+  });
+
   app.use(
     session({
       secret: process.env.SESSION_SECRET || "fashion-designer-secret-key",
@@ -84,10 +107,10 @@ export async function registerRoutes(
       cookie: {
         secure: process.env.NODE_ENV === "production",
         httpOnly: true,
-        sameSite: "lax",
+        sameSite: frontendUrl ? "none" : "lax", // "none" required for cross-origin, "lax" for same-origin
         maxAge: 24 * 60 * 60 * 1000,
       },
-      proxy: true, // Trust proxy (Render uses reverse proxy)
+      proxy: true, // Trust proxy (Render/Vercel uses reverse proxy)
     })
   );
 

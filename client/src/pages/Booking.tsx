@@ -37,6 +37,7 @@ import { PublicLayout } from "@/components/PublicLayout";
 import { PageLoader } from "@/components/LoadingSpinner";
 import { EmptyState } from "@/components/EmptyState";
 import { apiRequest } from "@/lib/queryClient";
+import { getApiUrl } from "@/lib/api";
 import type { DesignWithImages } from "@shared/schema";
 import { bookingFormSchema, type BookingFormData } from "@shared/schema";
 import { format } from "date-fns";
@@ -85,7 +86,8 @@ export default function Booking() {
 
   const bookingMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const response = await fetch("/api/book", {
+      const apiUrl = getApiUrl("/api/book");
+      const response = await fetch(apiUrl, {
         method: "POST",
         body: data,
       });
