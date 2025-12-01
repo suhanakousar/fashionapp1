@@ -21,25 +21,44 @@ git push origin main
 
 ---
 
-## Step 2: Create PostgreSQL Database on Render
+## Step 2: Set Up MongoDB Database
 
-1. **Go to [Render Dashboard](https://dashboard.render.com)**
+Your app uses MongoDB. You have two options:
 
-2. **Create PostgreSQL Database:**
-   - Click "New +" → "PostgreSQL"
-   - Name: `fashion-designer-db` (or any name)
-   - Database: `fashion_designer` (or any name)
-   - Region: Choose closest to you
-   - PostgreSQL Version: 16 (or latest)
-   - Plan: Free (or Starter for production)
-   - Click "Create Database"
+### Option A: MongoDB Atlas (Recommended - Free Tier Available)
 
-3. **Copy Database URL:**
-   - Wait for database to be ready (1-2 minutes)
-   - Click on your database
-   - Go to "Connections" tab
-   - Copy the "Internal Database URL" (we'll use this)
-   - **Important:** Use "Internal Database URL" for same-region services
+1. **Go to [MongoDB Atlas](https://www.mongodb.com/cloud/atlas)**
+
+2. **Create Free Cluster:**
+   - Sign up or log in
+   - Click "Create" → "Cluster"
+   - Choose "M0 FREE" (Free tier)
+   - Select a cloud provider and region (choose closest to your Render region)
+   - Click "Create Cluster"
+
+3. **Set Up Database Access:**
+   - Go to "Database Access" → "Add New Database User"
+   - Create username and password (save these!)
+   - Set privileges to "Atlas admin" or "Read and write to any database"
+   - Click "Add User"
+
+4. **Configure Network Access:**
+   - Go to "Network Access" → "Add IP Address"
+   - Click "Allow Access from Anywhere" (0.0.0.0/0) for Render
+   - Or add Render's IP ranges (check Render docs)
+   - Click "Confirm"
+
+5. **Get Connection String:**
+   - Go to "Database" → Click "Connect" on your cluster
+   - Choose "Connect your application"
+   - Copy the connection string
+   - Replace `<password>` with your database user password
+   - Replace `<dbname>` with `fashiondb` (or your preferred database name)
+   - Example: `mongodb+srv://username:password@cluster0.xxxxx.mongodb.net/fashiondb?retryWrites=true&w=majority`
+
+### Option B: Use Existing MongoDB Database
+
+If you already have a MongoDB connection string, use that.
 
 ---
 
@@ -57,7 +76,7 @@ git push origin main
    - **Branch:** `main` (or your default branch)
    - **Root Directory:** Leave empty (root of repo)
    - **Runtime:** `Node`
-   - **Build Command:** `npm run build`
+   - **Build Command:** `rm -rf node_modules && npm install && npm run build`
    - **Start Command:** `npm start`
    - **Plan:** Free (or Starter for production)
 
@@ -66,11 +85,15 @@ git push origin main
    
    Add these variables:
    ```
-   DATABASE_URL = <paste-internal-database-url-from-step-2>
+   DATABASE_URL = <paste-mongodb-connection-string-from-step-2>
    NODE_ENV = production
    PORT = 3000
    SESSION_SECRET = <generate-random-secret>
    ```
+   
+   **Important:** 
+   - `DATABASE_URL` should be your full MongoDB Atlas connection string
+   - Make sure to replace `<password>` and `<dbname>` in the connection string
 
 4. **Generate SESSION_SECRET:**
    Run this command in your terminal:
@@ -99,30 +122,20 @@ git push origin main
 
 ---
 
-## Step 5: Push Database Schema
+## Step 5: Initialize Database (Optional)
 
-After the first successful deployment:
+MongoDB doesn't require schema migrations like SQL databases. However, if you have seed data:
 
 1. **Open Render Shell:**
    - Go to your web service
    - Click "Shell" tab (or use "Manual Deploy" → "Run Command")
-   - Or use Render's web terminal
 
-2. **Run Database Migration:**
+2. **Seed Initial Data (Optional):**
    ```bash
-   npm run db:push
+   npm run seed
    ```
-
-3. **Seed Initial Data (Optional):**
-   ```bash
-   npx tsx server/seed.ts
-   ```
-
-**Alternative Method (Using Render's Manual Deploy):**
-- Go to your service → "Manual Deploy"
-- Select "Run Command"
-- Enter: `npm run db:push`
-- Click "Run"
+   
+   **Note:** MongoDB creates collections automatically when you first insert data, so no migration step is needed.
 
 ---
 
@@ -160,8 +173,9 @@ To configure:
 - For production, consider Starter plan ($7/month) for always-on
 
 ### Database Connection:
-- Use **Internal Database URL** when service and database are in same region
-- Use **External Database URL** only if needed (less secure, slower)
+- MongoDB Atlas connection strings work from anywhere
+- Make sure your MongoDB Atlas network access allows Render's IPs (or use 0.0.0.0/0 for development)
+- For production, consider restricting IP access to Render's IP ranges
 
 ### File Storage:
 - Render provides persistent disk storage
@@ -185,10 +199,11 @@ Make sure these are set:
 3. Ensure all dependencies are in `dependencies` (not just `devDependencies`)
 
 ### Database Connection Error:
-1. Verify `DATABASE_URL` is correct
-2. Check database is in same region as service
-3. Use Internal Database URL (not External)
-4. Ensure database is running (not paused)
+1. Verify `DATABASE_URL` is correct (check password and database name)
+2. Ensure MongoDB Atlas cluster is running
+3. Check Network Access in MongoDB Atlas allows your IP/Render IPs
+4. Verify database user credentials are correct
+5. Check MongoDB Atlas connection string format: `mongodb+srv://username:password@cluster.mongodb.net/dbname`
 
 ### App Won't Start:
 1. Check start command: `npm start`
@@ -247,13 +262,13 @@ Make sure these are set:
 
 ### Free Tier:
 - Web Service: Free (spins down after inactivity)
-- PostgreSQL: Free (90 days, then $7/month)
+- MongoDB Atlas: Free (M0 cluster - 512MB storage)
 - Good for: Development, testing
 
 ### Starter Plan:
 - Web Service: $7/month (always-on)
-- PostgreSQL: $7/month
-- Total: ~$14/month
+- MongoDB Atlas: Free tier available, or $9/month for M10 cluster
+- Total: ~$7-16/month
 - Good for: Small production apps
 
 ---
@@ -261,10 +276,11 @@ Make sure these are set:
 ## ✅ Deployment Checklist
 
 Before going live:
-- [ ] Database created and running
-- [ ] All environment variables set
-- [ ] Database schema pushed (`npm run db:push`)
-- [ ] Seed data created (optional)
+- [ ] MongoDB Atlas cluster created and running
+- [ ] Database user created with proper permissions
+- [ ] Network access configured (IP whitelist)
+- [ ] All environment variables set (DATABASE_URL, SESSION_SECRET, etc.)
+- [ ] Seed data created (optional - `npm run seed`)
 - [ ] App builds successfully
 - [ ] App starts without errors
 - [ ] Can login successfully
