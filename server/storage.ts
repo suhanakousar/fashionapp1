@@ -23,7 +23,7 @@ import {
   type ClientWithDetails,
   type OrderWithDetails,
   generateId,
-} from "@shared/schema";
+} from "../shared/schema.js";
 import { getDb } from "./db.js";
 import { ObjectId } from "mongodb";
 

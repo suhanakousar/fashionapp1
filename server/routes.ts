@@ -8,7 +8,7 @@ import fs from "fs";
 import { storage } from "./storage.js";
 import { jsPDF } from "jspdf";
 import archiver from "archiver";
-import { bookingFormSchema, insertBillingEntrySchema } from "@shared/schema";
+import { bookingFormSchema, insertBillingEntrySchema } from "../shared/schema.js";
 
 declare module "express-session" {
   interface SessionData {

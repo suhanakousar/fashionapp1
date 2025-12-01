@@ -1,6 +1,6 @@
 import "dotenv/config";
 import { connect, getDb } from "./db";
-import { generateId } from "@shared/schema";
+import { generateId } from "../shared/schema.js";
 import bcrypt from "bcryptjs";
 
 async function seed() {
