@@ -61,6 +61,13 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                   Contact
                 </span>
               </Link>
+              <Link href="/client/login" data-testid="link-client-login">
+                <span className={`text-sm font-medium transition-colors hover:text-primary cursor-pointer ${
+                  location === "/client/login" ? "text-primary" : "text-muted-foreground"
+                }`}>
+                  Track Order
+                </span>
+              </Link>
               <PWAInstallButton />
               <ThemeToggle />
               <Link href="/admin/login" data-testid="link-admin-login">
@@ -96,6 +103,9 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
               </Link>
               <Link href="/contact" data-testid="link-mobile-contact">
                 <span className="block py-2 text-base font-medium cursor-pointer">Contact</span>
+              </Link>
+              <Link href="/client/login" data-testid="link-mobile-client-login">
+                <span className="block py-2 text-base font-medium cursor-pointer">Track Order</span>
               </Link>
               <div className="pt-2">
                 <PWAInstallButton />
@@ -138,6 +148,11 @@ export function PublicLayout({ children }: { children: React.ReactNode }) {
                 <Link href="/contact" data-testid="link-footer-contact">
                   <span className="block text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
                     Contact
+                  </span>
+                </Link>
+                <Link href="/client/login" data-testid="link-footer-client-login">
+                  <span className="block text-sm text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
+                    Track Order
                   </span>
                 </Link>
               </div>

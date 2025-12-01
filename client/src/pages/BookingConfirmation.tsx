@@ -249,7 +249,12 @@ export default function BookingConfirmation() {
           </CardContent>
         </Card>
 
-        <div className="text-center mt-8">
+        <div className="text-center mt-8 space-x-4">
+          <Link href="/client/login" data-testid="link-track-order">
+            <Button className="gap-2">
+              Track Your Order
+            </Button>
+          </Link>
           <Link href="/" data-testid="link-back-gallery">
             <Button variant="outline" className="gap-2">
               <ArrowLeft className="h-4 w-4" />

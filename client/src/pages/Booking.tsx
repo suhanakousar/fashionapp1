@@ -98,15 +98,23 @@ export default function Booking() {
       return response.json();
     },
     onSuccess: (data) => {
-      // Automatically open WhatsApp with confirmation message
-      if (data.whatsappUrl) {
-        // Open WhatsApp in a new window/tab
-        window.open(data.whatsappUrl, "_blank");
-        
-        // Also show a toast notification
+      // Show appropriate message based on whether WhatsApp was sent automatically
+      if (data.whatsappSent) {
         toast({
           title: "Booking confirmed!",
-          description: "WhatsApp message opened. Please send it to confirm your booking.",
+          description: "Confirmation message sent to your WhatsApp automatically.",
+        });
+      } else if (data.whatsappUrl) {
+        // Fallback: Open WhatsApp if API not configured
+        window.open(data.whatsappUrl, "_blank");
+        toast({
+          title: "Booking confirmed!",
+          description: "Please check WhatsApp for your confirmation message.",
+        });
+      } else {
+        toast({
+          title: "Booking confirmed!",
+          description: "Your booking has been received. We'll contact you soon.",
         });
       }
       navigate(`/booking/confirm/${data.order.id}`);

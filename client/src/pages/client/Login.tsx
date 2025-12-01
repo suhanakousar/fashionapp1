@@ -63,12 +63,18 @@ export default function ClientLogin() {
       if (data.success) {
         setOtpSent(true);
         
-        // Automatically open WhatsApp with OTP message
-        if (data.whatsappUrl) {
+        if (data.whatsappSent) {
+          // OTP was sent automatically via API
+          toast({
+            title: "OTP Sent",
+            description: "OTP has been sent to your WhatsApp automatically. Please check and enter it below.",
+          });
+        } else if (data.whatsappUrl) {
+          // Fallback: Open WhatsApp if API not configured
           window.open(data.whatsappUrl, "_blank");
           toast({
-            title: "OTP Sent to WhatsApp",
-            description: "WhatsApp opened with your OTP. Please check and enter the OTP below.",
+            title: "OTP Ready",
+            description: "Please check WhatsApp for your OTP and enter it below.",
           });
         } else {
           toast({

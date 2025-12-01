@@ -391,7 +391,7 @@ export async function registerRoutes(
         metadata: { orderId: order.id, clientId: client.id },
       });
 
-      // Send WhatsApp confirmation message to client
+      // Send WhatsApp confirmation message to client automatically
       try {
         const whatsappMessage = whatsappService.generateBookingConfirmationMessage({
           clientName: client.name,
@@ -408,22 +408,32 @@ export async function registerRoutes(
         });
 
         const phone = client.whatsapp || client.phone;
-        const whatsappUrl = whatsappService.getWhatsAppURL(phone, whatsappMessage);
-
+        
+        // Try to send via API (Twilio/WhatsApp Business API) - automatic sending
+        const sendResult = await whatsappService.sendMessage(phone, whatsappMessage);
+        
         // Save WhatsApp message to database
         await storage.createWhatsAppMessage({
           clientId: client.id,
           orderId: order.id,
           phone,
           message: whatsappMessage,
-          status: "pending", // Will be sent via URL
+          status: sendResult.success ? "sent" : "failed",
         });
 
         const fullOrder = await storage.getOrder(order.id);
+        
+        // If API sending failed or not configured, provide URL as fallback
+        let whatsappUrl = null;
+        if (!sendResult.success || process.env.WHATSAPP_PROVIDER === "url") {
+          whatsappUrl = whatsappService.getWhatsAppURL(phone, whatsappMessage);
+        }
+
         res.json({ 
           order: fullOrder, 
           client,
-          whatsappUrl, // Return URL for frontend to open
+          whatsappSent: sendResult.success, // Indicates if message was automatically sent
+          whatsappUrl, // Fallback URL if API not configured
         });
       } catch (whatsappError) {
         console.error("WhatsApp notification error:", whatsappError);
@@ -1469,7 +1479,7 @@ export async function registerRoutes(
             metadata: { orderId: req.params.id },
           });
 
-          // Send WhatsApp notification to client
+          // Automatically send WhatsApp notification to client
           try {
             const whatsappMessage = whatsappService.generateOrderStatusMessage({
               id: fullOrder.id,
@@ -1482,6 +1492,7 @@ export async function registerRoutes(
             const client = fullOrder.client;
             if (client) {
               const phone = client.whatsapp || client.phone;
+              // Send automatically via API (if configured)
               const result = await whatsappService.sendMessage(phone, whatsappMessage);
               
               await storage.createWhatsAppMessage({
@@ -1491,6 +1502,10 @@ export async function registerRoutes(
                 message: whatsappMessage,
                 status: result.success ? "sent" : "failed",
               });
+
+              if (!result.success && process.env.WHATSAPP_PROVIDER === "url") {
+                console.log("WhatsApp API not configured. Message would be sent via URL method.");
+              }
             }
           } catch (whatsappError) {
             console.error("WhatsApp notification error:", whatsappError);
@@ -1535,33 +1550,55 @@ export async function registerRoutes(
         otpExpires,
       });
 
-      // Send OTP via WhatsApp (free integration - URL-based)
+      // Send OTP via WhatsApp automatically (via API if configured)
       try {
         const whatsappMessage = whatsappService.generateOTPMessage(client.name, otp);
         const whatsappPhone = client.whatsapp || client.phone;
-        const whatsappUrl = whatsappService.getWhatsAppURL(whatsappPhone, whatsappMessage);
-
+        
+        // Try to send via API (Twilio/WhatsApp Business API) - automatic sending
+        const sendResult = await whatsappService.sendMessage(whatsappPhone, whatsappMessage);
+        
         // Save WhatsApp message to database
         await storage.createWhatsAppMessage({
           clientId: client.id,
           phone: whatsappPhone,
           message: whatsappMessage,
-          status: "pending", // URL-based, will be sent when client opens
+          status: sendResult.success ? "sent" : "failed",
         });
 
-        res.json({ 
-          success: true, 
-          message: "OTP sent to your WhatsApp",
-          whatsappUrl, // Return URL for frontend to open
-        });
+        // If API sending failed or not configured, provide URL as fallback
+        let whatsappUrl = null;
+        if (!sendResult.success || process.env.WHATSAPP_PROVIDER === "url") {
+          whatsappUrl = whatsappService.getWhatsAppURL(whatsappPhone, whatsappMessage);
+        }
+
+        if (sendResult.success) {
+          res.json({ 
+            success: true, 
+            message: "OTP sent to your WhatsApp automatically",
+            whatsappSent: true,
+          });
+        } else {
+          // API not configured or failed - use URL fallback
+          res.json({ 
+            success: true, 
+            message: "OTP ready. Please open WhatsApp to receive it.",
+            whatsappSent: false,
+            whatsappUrl, // Return URL for frontend to open
+          });
+        }
       } catch (whatsappError) {
         console.error("WhatsApp OTP send error:", whatsappError);
-        // Fallback: still return success but log OTP (for development)
-        console.log(`OTP for ${phone}: ${otp} (WhatsApp failed, check console)`);
+        // Fallback: generate URL
+        const whatsappPhone = client.whatsapp || client.phone;
+        const whatsappMessage = whatsappService.generateOTPMessage(client.name, otp);
+        const whatsappUrl = whatsappService.getWhatsAppURL(whatsappPhone, whatsappMessage);
+        
         res.json({ 
           success: true, 
-          message: "OTP generated. Please check console for development.",
-          // In production, you might want to return error here
+          message: "OTP ready. Please open WhatsApp to receive it.",
+          whatsappSent: false,
+          whatsappUrl,
         });
       }
     } catch (error) {
