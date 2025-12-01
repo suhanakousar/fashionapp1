@@ -7,7 +7,10 @@
   "builds": [
     {
       "src": "api/index.ts",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     }
   ],
   "routes": [
@@ -26,12 +29,6 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "functions": {
-    "api/index.ts": {
-      "maxDuration": 30,
-      "memory": 1024
-    }
   }
 }
 
