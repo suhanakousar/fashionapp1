@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -24,10 +24,17 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function Login() {
   const [, navigate] = useLocation();
-  const { login } = useAuth();
+  const { login, user } = useAuth();
   const { toast } = useToast();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Redirect to dashboard when user is logged in
+  useEffect(() => {
+    if (user) {
+      navigate("/admin/dashboard");
+    }
+  }, [user, navigate]);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -41,14 +48,13 @@ export default function Login() {
     setIsLoading(true);
     try {
       await login(data.email, data.password);
-      navigate("/admin/dashboard");
+      // Navigation will happen automatically via useEffect when user state updates
     } catch (error: any) {
       toast({
         title: "Login failed",
         description: error.message || "Invalid email or password",
         variant: "destructive",
       });
-    } finally {
       setIsLoading(false);
     }
   };
