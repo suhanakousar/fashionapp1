@@ -9,6 +9,8 @@ import { storage } from "./storage.js";
 import { jsPDF } from "jspdf";
 import archiver from "archiver";
 import { bookingFormSchema, insertBillingEntrySchema } from "../shared/schema.js";
+import { v2 as cloudinary } from "cloudinary";
+import { Readable } from "stream";
 
 declare module "express-session" {
   interface SessionData {
@@ -16,20 +18,61 @@ declare module "express-session" {
   }
 }
 
-const upload = multer({
-  storage: multer.diskStorage({
-    destination: (req, file, cb) => {
-      const uploadDir = path.join(process.cwd(), "uploads");
-      if (!fs.existsSync(uploadDir)) {
-        fs.mkdirSync(uploadDir, { recursive: true });
+// Configure Cloudinary
+// Use environment variables for security (set in Vercel dashboard)
+// Or use CLOUDINARY_URL format: cloudinary://api_key:api_secret@cloud_name
+if (process.env.CLOUDINARY_URL) {
+  cloudinary.config({
+    secure: true,
+  });
+} else {
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dzxawjlvs",
+    api_key: process.env.CLOUDINARY_API_KEY || "893663778162643",
+    api_secret: process.env.CLOUDINARY_API_SECRET || "_ThzqgrXbg3IHRlqhSJll92P7_w",
+    secure: true,
+  });
+}
+
+// Helper function to upload file to Cloudinary
+async function uploadToCloudinary(file: Express.Multer.File, folder: string = "fashion-app"): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+    const ext = path.extname(file.originalname);
+    const publicId = `${folder}/${uniqueSuffix}`;
+    
+    // Convert buffer to stream
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        public_id: publicId,
+        resource_type: "auto",
+        folder: folder,
+      },
+      (error, result) => {
+        if (error) {
+          console.error("Cloudinary upload error:", error);
+          reject(error);
+        } else if (result) {
+          // Return the secure URL
+          resolve(result.secure_url);
+        } else {
+          reject(new Error("Upload failed: No result returned"));
+        }
       }
-      cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      cb(null, uniqueSuffix + path.extname(file.originalname));
-    },
-  }),
+    );
+    
+    // Convert buffer to stream and pipe to Cloudinary
+    const bufferStream = new Readable();
+    bufferStream.push(file.buffer);
+    bufferStream.push(null);
+    bufferStream.pipe(stream);
+  });
+}
+
+// For Vercel: Use memory storage since filesystem is read-only except /tmp
+// Files will be stored in memory and then uploaded to Cloudinary
+const upload = multer({
+  storage: multer.memoryStorage(), // Use memory storage for Vercel compatibility
   limits: { fileSize: 5 * 1024 * 1024 },
   fileFilter: (req, file, cb) => {
     const allowedTypes = /jpeg|jpg|png|webp|gif/;
@@ -39,6 +82,22 @@ const upload = multer({
       cb(null, true);
     } else {
       cb(new Error("Only image files are allowed"));
+    }
+  },
+});
+
+// More permissive upload for booking files (accepts images, PDFs, etc.)
+const uploadBookingFiles = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB for booking files
+  fileFilter: (req, file, cb) => {
+    // Allow images, PDFs, and common document types
+    const allowedTypes = /jpeg|jpg|png|webp|gif|pdf|doc|docx/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    if (extname) {
+      cb(null, true);
+    } else {
+      cb(new Error("File type not allowed. Allowed types: images, PDF, DOC, DOCX"));
     }
   },
 });
@@ -114,10 +173,8 @@ export async function registerRoutes(
     })
   );
 
-  app.use("/uploads", (req, res, next) => {
-    res.setHeader("Cross-Origin-Resource-Policy", "cross-origin");
-    next();
-  }, express.static(path.join(process.cwd(), "uploads")));
+  // Files are now served directly from Cloudinary via their URLs
+  // No need for a local /uploads endpoint
 
   app.post("/api/auth/login", async (req, res) => {
     try {
@@ -217,7 +274,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/book", rateLimit(10, 60000), upload.array("files", 5), async (req, res) => {
+  app.post("/api/book", rateLimit(10, 60000), uploadBookingFiles.array("files", 5), async (req, res) => {
     try {
       const { designId, ...formData } = req.body;
 
@@ -270,9 +327,10 @@ export async function registerRoutes(
       const files = req.files as Express.Multer.File[];
       if (files && files.length > 0) {
         for (const file of files) {
+          const cloudinaryUrl = await uploadToCloudinary(file, "fashion-app/orders");
           await storage.createOrderFile({
             orderId: order.id,
-            fileUrl: `/uploads/${file.filename}`,
+            fileUrl: cloudinaryUrl,
             fileType: file.mimetype,
             fileName: file.originalname,
           });
@@ -352,9 +410,10 @@ export async function registerRoutes(
       const files = req.files as Express.Multer.File[];
       if (files && files.length > 0) {
         for (let i = 0; i < files.length; i++) {
+          const cloudinaryUrl = await uploadToCloudinary(files[i], "fashion-app/designs");
           await storage.createDesignImage({
             designId: design.id,
-            imageUrl: `/uploads/${files[i].filename}`,
+            imageUrl: cloudinaryUrl,
             sortOrder: i,
           });
         }
@@ -398,9 +457,10 @@ export async function registerRoutes(
         const existingImages = await storage.getDesignImages(req.params.id);
         const startOrder = existingImages.length;
         for (let i = 0; i < files.length; i++) {
+          const cloudinaryUrl = await uploadToCloudinary(files[i], "fashion-app/designs");
           await storage.createDesignImage({
             designId: req.params.id,
-            imageUrl: `/uploads/${files[i].filename}`,
+            imageUrl: cloudinaryUrl,
             sortOrder: startOrder + i,
           });
         }

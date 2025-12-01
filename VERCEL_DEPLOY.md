@@ -34,6 +34,10 @@ This guide will help you deploy both the backend and frontend to Vercel separate
      - `SESSION_SECRET`: A random secret string (generate one: `openssl rand -base64 32`)
      - `NODE_ENV`: `production`
      - `PORT`: `3000` (optional, Vercel will set this automatically)
+     - `CLOUDINARY_CLOUD_NAME`: Your Cloudinary cloud name (e.g., `dzxawjlvs`)
+     - `CLOUDINARY_API_KEY`: Your Cloudinary API key (e.g., `893663778162643`)
+     - `CLOUDINARY_API_SECRET`: Your Cloudinary API secret (e.g., `_ThzqgrXbg3IHRlqhSJll92P7_w`)
+     - **OR** use `CLOUDINARY_URL`: `cloudinary://api_key:api_secret@cloud_name` (alternative format)
 
 6. **Important**: Before deploying, you have two options:
    
