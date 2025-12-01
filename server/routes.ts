@@ -876,5 +876,10 @@ export async function registerRoutes(
     }
   });
 
+  // 404 handler for API routes (must be last)
+  app.use("/api/*", (req, res) => {
+    res.status(404).json({ message: "API endpoint not found" });
+  });
+
   return httpServer;
 }

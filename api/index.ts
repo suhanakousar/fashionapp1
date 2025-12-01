@@ -45,6 +45,17 @@ async function getApp(): Promise<express.Express> {
     // Register routes
     await registerRoutes(httpServer, app);
 
+    // 404 handler for unmatched API routes (must be after all routes)
+    app.use((req, res, next) => {
+      // Only handle API routes here - let Vercel handle non-API routes
+      if (req.path.startsWith('/api/') || req.path.startsWith('/uploads/')) {
+        res.status(404).json({ message: 'API endpoint not found' });
+      } else {
+        // For non-API routes, don't handle them - let Vercel serve static files
+        next();
+      }
+    });
+
     // Error handler
     app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
       const status = err.status || err.statusCode || 500;
