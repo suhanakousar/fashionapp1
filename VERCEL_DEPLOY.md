@@ -17,13 +17,17 @@ This guide will help you deploy both the backend and frontend to Vercel separate
 2. Import your GitHub repository: `suhanakousar/fashionapp1`
 3. Configure the project:
    - **Project Name**: `fashionapp-backend` (or your preferred name)
-   - **Root Directory**: Leave as `.` (root)
+   - **Root Directory**: **IMPORTANT - Set to `.` (root directory)** - This is the current directory where `package.json`, `server/`, `api/`, and other folders are located
    - **Framework Preset**: Other
-   - **Build Command**: `npm run build`
-   - **Output Directory**: Leave empty (not used for serverless)
-   - **Install Command**: `npm install`
+   - **Build Command**: `npm install` (or leave empty - Vercel will auto-detect)
+   - **Output Directory**: Leave empty (not used for serverless functions)
+   - **Install Command**: `npm install` (or leave empty - Vercel will auto-detect)
 
-4. Add Environment Variables:
+4. **IMPORTANT**: In the Vercel dashboard, go to **Settings → General** and verify:
+   - **Root Directory**: Should be `.` (this means the root of the repository)
+   - This ensures Vercel can find `api/index.ts`, `server/`, `package.json`, etc.
+
+5. Add Environment Variables:
    - Click "Environment Variables"
    - Add the following:
      - `DATABASE_URL`: Your MongoDB connection string
@@ -31,13 +35,24 @@ This guide will help you deploy both the backend and frontend to Vercel separate
      - `NODE_ENV`: `production`
      - `PORT`: `3000` (optional, Vercel will set this automatically)
 
-5. **Important**: Rename `vercel-backend.json` to `vercel.json` in your repository, or:
-   - In Vercel dashboard, go to Settings → General
+6. **Important**: Before deploying, you have two options:
+   
+   **Option 1**: Rename `vercel-backend.json` to `vercel.json` in your repository
+   
+   **Option 2**: Keep the files separate and configure in Vercel dashboard:
+   - Go to Settings → General
    - Under "Build & Development Settings", you can override the configuration
+   - Or upload `vercel-backend.json` as the configuration file
 
-6. Click "Deploy"
+7. Click "Deploy"
 
-7. Wait for deployment to complete and note the deployment URL (e.g., `https://fashionapp-backend.vercel.app`)
+8. Wait for deployment to complete and note the deployment URL (e.g., `https://fashionapp-backend.vercel.app`)
+
+**Note**: The root directory (`.`) means Vercel will look for files in the repository root, where you have:
+- `api/index.ts` (serverless function entry point)
+- `server/` (backend code)
+- `package.json` (dependencies)
+- All other project files
 
 ### Option B: Using Vercel CLI
 

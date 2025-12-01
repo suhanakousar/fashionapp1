@@ -6,28 +6,35 @@
 1. Go to https://vercel.com/new
 2. Import `suhanakousar/fashionapp1`
 3. Project name: `fashionapp-backend`
-4. Framework: **Other**
-5. Build Command: `npm run build`
-6. Environment Variables:
+4. **Root Directory**: **Set to `.` (root)** - This is CRITICAL! It tells Vercel to use the repository root where all folders are located
+5. Framework: **Other**
+6. Build Command: `npm install` (or leave empty)
+7. Output Directory: Leave empty
+8. Environment Variables:
    - `DATABASE_URL` = Your MongoDB connection string
    - `SESSION_SECRET` = Random secret (generate: `openssl rand -base64 32`)
    - `NODE_ENV` = `production`
    - `FRONTEND_URL` = (Set after frontend deploys)
-7. **Before deploying**: Rename `vercel-backend.json` to `vercel.json` OR configure in dashboard
-8. Deploy and copy the URL (e.g., `https://fashionapp-backend.vercel.app`)
+9. **Before deploying**: 
+   - Verify Root Directory is set to `.` in Settings → General
+   - Rename `vercel-backend.json` to `vercel.json` OR configure in dashboard
+10. Deploy and copy the URL (e.g., `https://fashionapp-backend.vercel.app`)
 
 ### 2. Deploy Frontend
 1. Go to https://vercel.com/new
 2. Import `suhanakousar/fashionapp1` (same repo)
 3. Project name: `fashionapp-frontend`
-4. Framework: **Vite**
-5. Build Command: `npm run build`
-6. Output Directory: `dist/public`
-7. Environment Variables:
+4. **Root Directory**: **Set to `.` (root)** - Same as backend, use repository root
+5. Framework: **Vite**
+6. Build Command: `npm run build`
+7. Output Directory: `dist/public`
+8. Environment Variables:
    - `VITE_API_URL` = Your backend URL from step 1 (e.g., `https://fashionapp-backend.vercel.app`)
    - `NODE_ENV` = `production`
-8. **Before deploying**: Rename `vercel-frontend.json` to `vercel.json` OR configure in dashboard
-9. Deploy and copy the URL (e.g., `https://fashionapp-frontend.vercel.app`)
+9. **Before deploying**: 
+   - Verify Root Directory is set to `.` in Settings → General
+   - Rename `vercel-frontend.json` to `vercel.json` OR configure in dashboard
+10. Deploy and copy the URL (e.g., `https://fashionapp-frontend.vercel.app`)
 
 ### 3. Link Them Together
 1. Go back to backend project in Vercel
