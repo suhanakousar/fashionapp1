@@ -127,11 +127,16 @@ export default function Booking() {
     setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const nextStep = async () => {
+  const nextStep = async (e?: React.MouseEvent | React.KeyboardEvent) => {
+    e?.preventDefault();
+    e?.stopPropagation();
+    
     let fieldsToValidate: (keyof BookingFormData)[] = [];
     if (currentStep === 0) {
       fieldsToValidate = ["name", "phone"];
     }
+    // Measurements step (step 1) - no required fields, just move to next step
+    // Details step (step 2) - no validation needed before submit
 
     const isValid = await form.trigger(fieldsToValidate);
     if (isValid && currentStep < steps.length - 1) {
@@ -259,7 +264,25 @@ export default function Booking() {
         <div className="grid md:grid-cols-3 gap-8">
           <div className="md:col-span-2">
             <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <form 
+                onSubmit={(e) => {
+                  // Only submit on the final step
+                  if (currentStep === steps.length - 1) {
+                    form.handleSubmit(onSubmit)(e);
+                  } else {
+                    e.preventDefault();
+                    nextStep(e);
+                  }
+                }} 
+                className="space-y-6"
+                onKeyDown={(e) => {
+                  // Prevent form submission on Enter key unless on final step
+                  if (e.key === "Enter" && currentStep < steps.length - 1) {
+                    e.preventDefault();
+                    nextStep(e);
+                  }
+                }}
+              >
                 {currentStep === 0 && (
                   <Card>
                     <CardContent className="pt-6 space-y-4">
@@ -621,7 +644,11 @@ export default function Booking() {
                   {currentStep < steps.length - 1 ? (
                     <Button
                       type="button"
-                      onClick={nextStep}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        nextStep(e);
+                      }}
                       data-testid="button-next-step"
                     >
                       Next

@@ -103,7 +103,19 @@ const uploadBookingFiles = multer({
 });
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.session.userId) {
+  // Debug session info (helpful for troubleshooting)
+  const hasSession = !!req.session;
+  const hasUserId = !!req.session?.userId;
+  const sessionId = req.sessionID;
+  
+  if (!hasUserId) {
+    console.log("Auth failed:", {
+      hasSession,
+      hasUserId,
+      sessionId,
+      cookieHeader: req.headers.cookie ? "present" : "missing",
+      path: req.path,
+    });
     return res.status(401).json({ message: "Unauthorized" });
   }
   next();
@@ -137,15 +149,22 @@ export async function registerRoutes(
 ): Promise<Server> {
   // CORS middleware for cross-origin requests (needed when frontend and backend are on different domains)
   const frontendUrl = process.env.FRONTEND_URL || process.env.VITE_API_URL?.replace('/api', '') || '';
+  const isProduction = process.env.NODE_ENV === "production";
+  // Check if frontend and backend are on same domain (both on vercel.app)
+  const isSameOrigin = !frontendUrl || frontendUrl.includes("vercel.app");
+  
   app.use((req, res, next) => {
-    if (frontendUrl) {
+    if (frontendUrl && !isSameOrigin) {
       res.setHeader('Access-Control-Allow-Origin', frontendUrl);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
     } else {
-      // If no frontend URL is set, allow all origins (for development or same-domain deployment)
-      res.setHeader('Access-Control-Allow-Origin', req.headers.origin || '*');
+      // If no frontend URL is set or same origin, allow the request origin
+      const origin = req.headers.origin;
+      if (origin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, PATCH, DELETE, OPTIONS');
       res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
@@ -163,13 +182,19 @@ export async function registerRoutes(
       secret: process.env.SESSION_SECRET || "fashion-designer-secret-key",
       resave: false,
       saveUninitialized: false,
+      name: "connect.sid", // Explicitly set session cookie name
       cookie: {
-        secure: process.env.NODE_ENV === "production",
+        // In production on Vercel, always use secure (HTTPS)
+        // For same-origin, we can use "lax" which is simpler
+        secure: isProduction, // Always secure in production (Vercel uses HTTPS)
         httpOnly: true,
-        sameSite: frontendUrl ? "none" : "lax", // "none" required for cross-origin, "lax" for same-origin
-        maxAge: 24 * 60 * 60 * 1000,
+        // Use "lax" for same-origin (simpler and more secure), "none" only for cross-origin
+        sameSite: isSameOrigin ? "lax" : "none",
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+        path: "/", // Ensure cookie is available for all paths
+        // Don't set domain - let browser handle it automatically
       },
-      proxy: true, // Trust proxy (Render/Vercel uses reverse proxy)
+      proxy: true, // Trust proxy (Vercel uses reverse proxy)
     })
   );
 
@@ -198,7 +223,18 @@ export async function registerRoutes(
       }
 
       req.session.userId = user.id;
-      console.log(`Login successful for user: ${user.email}`);
+      // Save session before sending response
+      await new Promise<void>((resolve, reject) => {
+        req.session.save((err) => {
+          if (err) {
+            console.error("Session save error:", err);
+            reject(err);
+          } else {
+            console.log(`Login successful for user: ${user.email}, session ID: ${req.sessionID}`);
+            resolve();
+          }
+        });
+      });
       res.json({ user: { ...user, password: undefined } });
     } catch (error) {
       console.error("Login error:", error);
