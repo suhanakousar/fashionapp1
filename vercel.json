@@ -1,18 +1,13 @@
 {
   "version": 2,
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist/public",
   "builds": [
     {
       "src": "api/index.ts",
       "use": "@vercel/node",
       "config": {
         "maxLambdaSize": "50mb"
-      }
-    },
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": {
-        "distDir": "dist/public"
       }
     }
   ],
@@ -24,25 +19,28 @@
     {
       "src": "/uploads/(.*)",
       "dest": "/api/index.ts"
-    },
+    }
+  ],
+  "rewrites": [
     {
-      "src": "/assets/(.*)",
-      "dest": "/dist/public/assets/$1",
-      "headers": {
-        "Cache-Control": "public, max-age=31536000, immutable"
-      }
-    },
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
     {
-      "src": "/(.*\\.(js|css|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot))",
-      "dest": "/dist/public/$1"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/dist/public/index.html"
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
   ],
   "env": {
     "NODE_ENV": "production"
   }
 }
+
 

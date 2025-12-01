@@ -187,10 +187,26 @@ export default function DesignEditor() {
       return response.json();
     },
     onSuccess: (data) => {
-      setIsSubmitting(false);
       queryClient.invalidateQueries({ queryKey: ["/api/admin/designs"] });
-      toast({ title: isNew ? "Design created" : "Design updated" });
-      navigate(`/admin/designs/${data.design?.id || designId}`);
+      
+      if (isNew) {
+        // After creating, go back to designs list
+        toast({ 
+          title: "Design created successfully",
+          description: "Redirecting to designs list..."
+        });
+        // Use setTimeout to ensure toast is visible before navigation
+        setTimeout(() => {
+          navigate("/admin/designs");
+        }, 500);
+      } else {
+        // After updating, refresh the design data and show success message
+        queryClient.invalidateQueries({ queryKey: ["/api/admin/designs", designId] });
+        toast({ 
+          title: "Design updated successfully"
+        });
+      }
+      setIsSubmitting(false);
     },
     onError: (error: Error) => {
       setIsSubmitting(false);
