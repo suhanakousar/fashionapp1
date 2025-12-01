@@ -452,7 +452,7 @@ export default function ClientDetail() {
                             className="flex items-center justify-between p-3 rounded-lg border"
                             data-testid={`billing-${entry.id}`}
                           >
-                            <div>
+                            <div className="flex-1">
                               <p className="font-medium">{entry.description}</p>
                               <p className="text-xs text-muted-foreground">
                                 {format(new Date(entry.createdAt), "MMM d, yyyy")}
@@ -472,6 +472,18 @@ export default function ClientDetail() {
                               >
                                 {entry.paid ? "Paid" : "Pending"}
                               </Badge>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  window.open(`/api/admin/billing/${entry.id}/invoice`, "_blank");
+                                }}
+                                className="h-8 w-8"
+                                title="Download Invoice PDF"
+                                data-testid={`button-download-invoice-${entry.id}`}
+                              >
+                                <Download className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
                         ))}

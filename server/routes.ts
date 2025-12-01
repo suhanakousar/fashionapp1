@@ -876,6 +876,115 @@ export async function registerRoutes(
     }
   });
 
+  app.get("/api/admin/billing/:id/invoice", requireAuth, async (req, res) => {
+    try {
+      // Get billing entry from database
+      const db = await storage.getDb();
+      const billingEntryDoc = await db.collection("billing_entries").findOne({ id: req.params.id });
+      if (!billingEntryDoc) {
+        return res.status(404).json({ message: "Billing entry not found" });
+      }
+
+      // Convert to BillingEntry format using the same helper function
+      const billingEntry = {
+        id: billingEntryDoc.id || billingEntryDoc._id?.toString() || "",
+        orderId: billingEntryDoc.orderId,
+        clientId: billingEntryDoc.clientId,
+        description: billingEntryDoc.description,
+        amount: billingEntryDoc.amount,
+        paid: billingEntryDoc.paid ?? false,
+        createdAt: billingEntryDoc.createdAt || new Date(),
+      };
+
+      const order = billingEntry.orderId ? await storage.getOrder(billingEntry.orderId) : null;
+      const client = await storage.getClient(billingEntry.clientId);
+
+      const doc = new jsPDF();
+      const pageWidth = doc.internal.pageSize.getWidth();
+
+      doc.setFontSize(24);
+      doc.text("INVOICE", pageWidth / 2, 30, { align: "center" });
+
+      doc.setFontSize(12);
+      doc.text("Rajiya Fashion", 20, 50);
+      doc.setFontSize(10);
+      doc.text("D.No. 7/394, Rayachur Street, Main Bazar", 20, 58);
+      doc.text("Tadipatri-515411", 20, 65);
+      doc.text("Phone: 9182720386", 20, 72);
+
+      doc.setFontSize(10);
+      doc.text(`Invoice #: ${billingEntry.id.slice(0, 8).toUpperCase()}`, pageWidth - 70, 50);
+      doc.text(`Date: ${new Date(billingEntry.createdAt).toLocaleDateString()}`, pageWidth - 70, 58);
+      doc.text(`Status: ${billingEntry.paid ? "PAID" : "PENDING"}`, pageWidth - 70, 65);
+
+      doc.setFontSize(12);
+      doc.text("Bill To:", 20, 85);
+      doc.setFontSize(10);
+      doc.text(client?.name || "", 20, 93);
+      doc.text(client?.phone || "", 20, 100);
+      if (client?.email) {
+        doc.text(client.email, 20, 107);
+      }
+      if (client?.address) {
+        doc.text(client.address, 20, 114);
+      }
+
+      let y = 140;
+      doc.setFontSize(10);
+      doc.setDrawColor(200);
+      doc.line(20, y, pageWidth - 20, y);
+      y += 5;
+
+      doc.setFont(undefined, "bold");
+      doc.text("Description", 20, y);
+      doc.text("Amount", pageWidth - 50, y, { align: "right" });
+      doc.text("Status", pageWidth - 20, y, { align: "right" });
+      y += 5;
+      doc.line(20, y, pageWidth - 20, y);
+      y += 8;
+
+      doc.setFont(undefined, "normal");
+      doc.text(billingEntry.description, 20, y);
+      doc.text(`₹${parseFloat(billingEntry.amount).toFixed(2)}`, pageWidth - 50, y, { align: "right" });
+      doc.text(billingEntry.paid ? "Paid" : "Pending", pageWidth - 20, y, { align: "right" });
+      y += 8;
+
+      if (order) {
+        y += 5;
+        doc.setFontSize(9);
+        doc.setFont(undefined, "italic");
+        doc.text(`Related Order: ${order.design?.title || "N/A"}`, 20, y);
+        doc.text(`Order ID: ${order.id.slice(0, 8).toUpperCase()}`, 20, y + 6);
+        y += 15;
+      }
+
+      y += 5;
+      doc.line(20, y, pageWidth - 20, y);
+      y += 10;
+
+      doc.setFont(undefined, "bold");
+      doc.setFontSize(10);
+      doc.text("Total Amount:", pageWidth - 80, y);
+      doc.text(`₹${parseFloat(billingEntry.amount).toFixed(2)}`, pageWidth - 20, y, { align: "right" });
+      y += 8;
+      doc.text("Payment Status:", pageWidth - 80, y);
+      doc.text(billingEntry.paid ? "PAID" : "PENDING", pageWidth - 20, y, { align: "right" });
+
+      y += 30;
+      doc.setFont(undefined, "normal");
+      doc.setFontSize(9);
+      doc.text("Thank you for your business!", pageWidth / 2, y, { align: "center" });
+
+      const pdfBuffer = doc.output("arraybuffer");
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", `attachment; filename=invoice-${billingEntry.id.slice(0, 8)}.pdf`);
+      res.send(Buffer.from(pdfBuffer));
+    } catch (error) {
+      console.error("Billing invoice generation error:", error);
+      res.status(500).json({ message: "Failed to generate invoice" });
+    }
+  });
+
   // 404 handler for API routes (must be last)
   app.use("/api/*", (req, res) => {
     res.status(404).json({ message: "API endpoint not found" });
