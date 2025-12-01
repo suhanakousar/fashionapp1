@@ -795,76 +795,149 @@ export async function registerRoutes(
 
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
 
-      doc.setFontSize(24);
-      doc.text("INVOICE", pageWidth / 2, 30, { align: "center" });
-
+      // Header with colored background box
+      doc.setFillColor(75, 85, 99); // Gray-600
+      doc.rect(0, 0, pageWidth, 50, "F");
+      
+      // Company name in header
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(28);
+      doc.setFont(undefined, "bold");
+      doc.text("RAJIYA FASHION", pageWidth / 2, 25, { align: "center" });
+      
       doc.setFontSize(12);
-      doc.text("Rajiya Fashion", 20, 50);
-      doc.setFontSize(10);
-      doc.text("D.No. 7/394, Rayachur Street, Main Bazar", 20, 58);
-      doc.text("Tadipatri-515411", 20, 65);
-      doc.text("Phone: 9182720386", 20, 72);
+      doc.setFont(undefined, "normal");
+      doc.text("Premium Fashion Design Studio", pageWidth / 2, 35, { align: "center" });
 
-      doc.setFontSize(10);
-      doc.text(`Invoice #: ${order.id.slice(0, 8).toUpperCase()}`, pageWidth - 70, 50);
-      doc.text(`Date: ${new Date().toLocaleDateString()}`, pageWidth - 70, 58);
-      doc.text(`Status: ${order.status.replace(/_/g, " ").toUpperCase()}`, pageWidth - 70, 65);
+      // Reset text color
+      doc.setTextColor(0, 0, 0);
 
-      doc.setFontSize(12);
-      doc.text("Bill To:", 20, 85);
+      // Company details box
+      let y = 60;
+      doc.setFillColor(249, 250, 251); // Gray-50
+      doc.roundedRect(20, y, pageWidth / 2 - 30, 40, 3, 3, "F");
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("From:", 25, y + 8);
       doc.setFontSize(10);
-      doc.text(order.client?.name || "", 20, 93);
-      doc.text(order.client?.phone || "", 20, 100);
+      doc.setFont(undefined, "normal");
+      doc.text("Rajiya Fashion", 25, y + 16);
+      doc.text("D.No. 7/394, Rayachur Street", 25, y + 23);
+      doc.text("Main Bazar, Tadipatri-515411", 25, y + 30);
+      doc.text("Phone: +91 9182720386", 25, y + 37);
+
+      // Invoice details box
+      doc.setFillColor(249, 250, 251);
+      doc.roundedRect(pageWidth / 2 + 10, y, pageWidth / 2 - 30, 40, 3, 3, "F");
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("Invoice Details", pageWidth / 2 + 15, y + 8);
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(`Invoice #: ${order.id.slice(0, 8).toUpperCase()}`, pageWidth / 2 + 15, y + 16);
+      doc.text(`Date: ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, pageWidth / 2 + 15, y + 23);
+      doc.text(`Status: ${order.status.replace(/_/g, " ").toUpperCase()}`, pageWidth / 2 + 15, y + 30);
+      doc.text(`Order #: ${order.id.slice(0, 8).toUpperCase()}`, pageWidth / 2 + 15, y + 37);
+
+      // Bill To section
+      y = 110;
+      doc.setFillColor(249, 250, 251);
+      doc.roundedRect(20, y, pageWidth - 40, 35, 3, 3, "F");
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("Bill To:", 25, y + 8);
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(order.client?.name || "", 25, y + 17);
+      doc.text(order.client?.phone || "", 25, y + 25);
       if (order.client?.email) {
-        doc.text(order.client.email, 20, 107);
+        doc.text(order.client.email, 25, y + 33);
       }
 
-      let y = 130;
-      doc.setFontSize(10);
-      doc.setDrawColor(200);
-      doc.line(20, y, pageWidth - 20, y);
-      y += 5;
-
+      // Items table header
+      y = 155;
+      doc.setFillColor(75, 85, 99);
+      doc.roundedRect(20, y, pageWidth - 40, 12, 2, 2, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
       doc.setFont(undefined, "bold");
-      doc.text("Description", 20, y);
-      doc.text("Amount", pageWidth - 50, y, { align: "right" });
-      doc.text("Status", pageWidth - 20, y, { align: "right" });
-      y += 5;
-      doc.line(20, y, pageWidth - 20, y);
-      y += 8;
+      doc.text("Description", 25, y + 8);
+      doc.text("Amount", pageWidth - 70, y + 8, { align: "right" });
+      doc.text("Status", pageWidth - 25, y + 8, { align: "right" });
+      doc.setTextColor(0, 0, 0);
 
-      doc.setFont(undefined, "normal");
+      // Items table rows
+      y += 15;
       let total = 0;
       let paid = 0;
+      let rowColor = false;
 
       for (const entry of order.billingEntries || []) {
-        doc.text(entry.description, 20, y);
-        doc.text(`₹${parseFloat(entry.amount).toFixed(2)}`, pageWidth - 50, y, { align: "right" });
-        doc.text(entry.paid ? "Paid" : "Pending", pageWidth - 20, y, { align: "right" });
+        // Alternate row colors
+        if (rowColor) {
+          doc.setFillColor(249, 250, 251);
+          doc.rect(20, y - 5, pageWidth - 40, 10, "F");
+        }
+        rowColor = !rowColor;
+
+        doc.setFontSize(10);
+        doc.setFont(undefined, "normal");
+        doc.text(entry.description, 25, y);
+        doc.text(`₹${parseFloat(entry.amount).toFixed(2)}`, pageWidth - 70, y, { align: "right" });
+        
+        // Status with color
+        const statusText = entry.paid ? "Paid" : "Pending";
+        const statusColor = entry.paid ? [34, 197, 94] : [251, 191, 36]; // Green or Amber
+        doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+        doc.setFont(undefined, "bold");
+        doc.text(statusText, pageWidth - 25, y, { align: "right" });
+        doc.setTextColor(0, 0, 0);
+        
         total += parseFloat(entry.amount);
         if (entry.paid) paid += parseFloat(entry.amount);
-        y += 8;
+        y += 10;
       }
 
-      y += 5;
+      // Summary box
+      y += 10;
+      doc.setFillColor(241, 245, 249); // Slate-100
+      doc.roundedRect(pageWidth - 90, y, 70, 50, 3, 3, "F");
+      
+      doc.setDrawColor(200, 200, 200);
+      doc.line(pageWidth - 85, y + 15, pageWidth - 25, y + 15);
+      doc.line(pageWidth - 85, y + 30, pageWidth - 25, y + 30);
+
+      doc.setFontSize(10);
+      doc.setFont(undefined, "bold");
+      doc.text("Summary", pageWidth - 85, y + 10);
+      
+      doc.setFont(undefined, "normal");
+      doc.text("Total:", pageWidth - 85, y + 23);
+      doc.text(`₹${total.toFixed(2)}`, pageWidth - 25, y + 23, { align: "right" });
+      
+      doc.text("Paid:", pageWidth - 85, y + 38);
+      doc.text(`₹${paid.toFixed(2)}`, pageWidth - 25, y + 38, { align: "right" });
+      
+      doc.setFont(undefined, "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(220, 38, 38); // Red for balance
+      doc.text("Balance Due:", pageWidth - 85, y + 48);
+      doc.text(`₹${(total - paid).toFixed(2)}`, pageWidth - 25, y + 48, { align: "right" });
+      doc.setTextColor(0, 0, 0);
+
+      // Footer
+      y = pageHeight - 30;
+      doc.setDrawColor(200, 200, 200);
       doc.line(20, y, pageWidth - 20, y);
       y += 10;
-
-      doc.setFont(undefined, "bold");
-      doc.text("Total:", pageWidth - 80, y);
-      doc.text(`₹${total.toFixed(2)}`, pageWidth - 20, y, { align: "right" });
-      y += 8;
-      doc.text("Paid:", pageWidth - 80, y);
-      doc.text(`₹${paid.toFixed(2)}`, pageWidth - 20, y, { align: "right" });
-      y += 8;
-      doc.text("Balance Due:", pageWidth - 80, y);
-      doc.text(`₹${(total - paid).toFixed(2)}`, pageWidth - 20, y, { align: "right" });
-
-      y += 30;
-      doc.setFont(undefined, "normal");
       doc.setFontSize(9);
-      doc.text("Thank you for your business!", pageWidth / 2, y, { align: "center" });
+      doc.setFont(undefined, "italic");
+      doc.setTextColor(100, 100, 100);
+      doc.text("Thank you for your business! We appreciate your trust in Rajiya Fashion.", pageWidth / 2, y, { align: "center" });
+      doc.text("For any queries, please contact us at +91 9182720386", pageWidth / 2, y + 6, { align: "center" });
+      doc.setTextColor(0, 0, 0);
 
       const pdfBuffer = doc.output("arraybuffer");
       res.setHeader("Content-Type", "application/pdf");
@@ -891,50 +964,76 @@ export async function registerRoutes(
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
       const pageHeight = doc.internal.pageSize.getHeight();
-      let y = 30;
 
-      doc.setFontSize(24);
-      doc.text("BILLING STATEMENT", pageWidth / 2, y, { align: "center" });
-      y += 15;
-
-      doc.setFontSize(12);
-      doc.text("Rajiya Fashion", 20, y);
-      doc.setFontSize(10);
-      doc.text("D.No. 7/394, Rayachur Street, Main Bazar", 20, y + 8);
-      doc.text("Tadipatri-515411", 20, y + 15);
-      doc.text("Phone: 9182720386", 20, y + 22);
-
-      doc.setFontSize(10);
-      doc.text(`Statement Date: ${new Date().toLocaleDateString()}`, pageWidth - 70, y);
-      doc.text(`Client ID: ${client.id.slice(0, 8).toUpperCase()}`, pageWidth - 70, y + 8);
-
-      y += 35;
-      doc.setFontSize(12);
-      doc.text("Bill To:", 20, y);
-      doc.setFontSize(10);
-      doc.text(client.name || "", 20, y + 8);
-      doc.text(client.phone || "", 20, y + 15);
-      if (client.email) {
-        doc.text(client.email, 20, y + 22);
-      }
-      if (client.address) {
-        doc.text(client.address, 20, y + 29);
-      }
-
-      y += 45;
-      doc.setFontSize(10);
-      doc.setDrawColor(200);
-      doc.line(20, y, pageWidth - 20, y);
-      y += 5;
-
+      // Header with colored background box
+      doc.setFillColor(75, 85, 99);
+      doc.rect(0, 0, pageWidth, 50, "F");
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(28);
       doc.setFont(undefined, "bold");
-      doc.text("Date", 20, y);
-      doc.text("Description", 60, y);
-      doc.text("Amount", pageWidth - 50, y, { align: "right" });
-      doc.text("Status", pageWidth - 20, y, { align: "right" });
-      y += 5;
-      doc.line(20, y, pageWidth - 20, y);
-      y += 8;
+      doc.text("BILLING STATEMENT", pageWidth / 2, 25, { align: "center" });
+      
+      doc.setFontSize(12);
+      doc.setFont(undefined, "normal");
+      doc.text("Complete Transaction History", pageWidth / 2, 35, { align: "center" });
+
+      doc.setTextColor(0, 0, 0);
+
+      // Company details box
+      let y = 60;
+      doc.setFillColor(249, 250, 251);
+      doc.roundedRect(20, y, pageWidth / 2 - 30, 40, 3, 3, "F");
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("From:", 25, y + 8);
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text("Rajiya Fashion", 25, y + 16);
+      doc.text("D.No. 7/394, Rayachur Street", 25, y + 23);
+      doc.text("Main Bazar, Tadipatri-515411", 25, y + 30);
+      doc.text("Phone: +91 9182720386", 25, y + 37);
+
+      // Statement details box
+      doc.setFillColor(249, 250, 251);
+      doc.roundedRect(pageWidth / 2 + 10, y, pageWidth / 2 - 30, 40, 3, 3, "F");
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("Statement Details", pageWidth / 2 + 15, y + 8);
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(`Statement Date: ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, pageWidth / 2 + 15, y + 16);
+      doc.text(`Client ID: ${client.id.slice(0, 8).toUpperCase()}`, pageWidth / 2 + 15, y + 23);
+      doc.text(`Entries: ${billingEntries.length}`, pageWidth / 2 + 15, y + 30);
+
+      // Bill To section
+      y = 110;
+      doc.setFillColor(249, 250, 251);
+      doc.roundedRect(20, y, pageWidth - 40, 35, 3, 3, "F");
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("Bill To:", 25, y + 8);
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(client.name || "", 25, y + 17);
+      doc.text(client.phone || "", 25, y + 25);
+      if (client.email) {
+        doc.text(client.email, 25, y + 33);
+      }
+
+      // Items table header
+      y = 155;
+      doc.setFillColor(75, 85, 99);
+      doc.roundedRect(20, y, pageWidth - 40, 12, 2, 2, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("Date", 25, y + 8);
+      doc.text("Description", 60, y + 8);
+      doc.text("Amount", pageWidth - 50, y + 8, { align: "right" });
+      doc.text("Status", pageWidth - 25, y + 8, { align: "right" });
+      doc.setTextColor(0, 0, 0);
+      y += 15;
 
       doc.setFont(undefined, "normal");
       let total = 0;
@@ -954,65 +1053,112 @@ export async function registerRoutes(
         }
       }
 
+      let rowColor = false;
       for (const entry of billingEntries) {
         // Check if we need a new page
-        if (y > pageHeight - 40) {
+        if (y > pageHeight - 60) {
           doc.addPage();
           y = 30;
+          // Redraw header on new page
+          doc.setFillColor(75, 85, 99);
+          doc.roundedRect(20, y, pageWidth - 40, 12, 2, 2, "F");
+          doc.setTextColor(255, 255, 255);
+          doc.setFontSize(11);
+          doc.setFont(undefined, "bold");
+          doc.text("Date", 25, y + 8);
+          doc.text("Description", 60, y + 8);
+          doc.text("Amount", pageWidth - 50, y + 8, { align: "right" });
+          doc.text("Status", pageWidth - 25, y + 8, { align: "right" });
+          doc.setTextColor(0, 0, 0);
+          y += 15;
+          rowColor = false;
         }
 
-        const entryDate = new Date(entry.createdAt).toLocaleDateString();
-        doc.text(entryDate, 20, y);
+        // Alternate row colors
+        if (rowColor) {
+          doc.setFillColor(249, 250, 251);
+          doc.rect(20, y - 5, pageWidth - 40, 10, "F");
+        }
+        rowColor = !rowColor;
+
+        const entryDate = new Date(entry.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+        doc.setFontSize(10);
+        doc.setFont(undefined, "normal");
+        doc.text(entryDate, 25, y);
         
         let description = entry.description;
         if (entry.orderId && ordersMap.has(entry.orderId)) {
           const order = ordersMap.get(entry.orderId);
-          description += ` (Order: ${order.design?.title || "N/A"})`;
+          description += ` (${order.design?.title || "N/A"})`;
         }
         
         // Truncate description if too long
-        if (description.length > 50) {
-          description = description.substring(0, 47) + "...";
+        if (description.length > 45) {
+          description = description.substring(0, 42) + "...";
         }
         doc.text(description, 60, y);
         
         doc.text(`₹${parseFloat(entry.amount).toFixed(2)}`, pageWidth - 50, y, { align: "right" });
-        doc.text(entry.paid ? "Paid" : "Pending", pageWidth - 20, y, { align: "right" });
+        
+        // Status with color
+        const statusText = entry.paid ? "Paid" : "Pending";
+        const statusColor = entry.paid ? [34, 197, 94] : [251, 191, 36];
+        doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+        doc.setFont(undefined, "bold");
+        doc.text(statusText, pageWidth - 25, y, { align: "right" });
+        doc.setTextColor(0, 0, 0);
         
         total += parseFloat(entry.amount);
         if (entry.paid) paid += parseFloat(entry.amount);
-        y += 8;
+        y += 10;
       }
 
       // Check if we need a new page for summary
-      if (y > pageHeight - 50) {
+      if (y > pageHeight - 60) {
         doc.addPage();
         y = 30;
       }
 
-      y += 5;
+      // Summary box
+      y += 10;
+      doc.setFillColor(241, 245, 249);
+      doc.roundedRect(pageWidth - 90, y, 70, 55, 3, 3, "F");
+      
+      doc.setDrawColor(200, 200, 200);
+      doc.line(pageWidth - 85, y + 15, pageWidth - 25, y + 15);
+      doc.line(pageWidth - 85, y + 30, pageWidth - 25, y + 30);
+      doc.line(pageWidth - 85, y + 45, pageWidth - 25, y + 45);
+
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("Summary", pageWidth - 85, y + 10);
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text("Total Amount:", pageWidth - 85, y + 23);
+      doc.text(`₹${total.toFixed(2)}`, pageWidth - 25, y + 23, { align: "right" });
+      
+      doc.text("Total Paid:", pageWidth - 85, y + 38);
+      doc.text(`₹${paid.toFixed(2)}`, pageWidth - 25, y + 38, { align: "right" });
+      
+      doc.setFont(undefined, "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(220, 38, 38);
+      doc.text("Outstanding:", pageWidth - 85, y + 53);
+      doc.text(`₹${(total - paid).toFixed(2)}`, pageWidth - 25, y + 53, { align: "right" });
+      doc.setTextColor(0, 0, 0);
+
+      // Footer
+      y = pageHeight - 30;
+      doc.setDrawColor(200, 200, 200);
       doc.line(20, y, pageWidth - 20, y);
       y += 10;
-
-      doc.setFont(undefined, "bold");
-      doc.text("Summary", 20, y);
-      y += 10;
-
-      doc.setFont(undefined, "normal");
-      doc.text("Total Amount:", pageWidth - 80, y);
-      doc.text(`₹${total.toFixed(2)}`, pageWidth - 20, y, { align: "right" });
-      y += 8;
-      doc.text("Total Paid:", pageWidth - 80, y);
-      doc.text(`₹${paid.toFixed(2)}`, pageWidth - 20, y, { align: "right" });
-      y += 8;
-      doc.setFont(undefined, "bold");
-      doc.text("Outstanding Balance:", pageWidth - 80, y);
-      doc.text(`₹${(total - paid).toFixed(2)}`, pageWidth - 20, y, { align: "right" });
-
-      y += 20;
-      doc.setFont(undefined, "normal");
       doc.setFontSize(9);
-      doc.text("Thank you for your business!", pageWidth / 2, y, { align: "center" });
+      doc.setFont(undefined, "italic");
+      doc.setTextColor(100, 100, 100);
+      doc.text("Thank you for your business! We appreciate your trust in Rajiya Fashion.", pageWidth / 2, y, { align: "center" });
+      doc.text("For any queries, please contact us at +91 9182720386", pageWidth / 2, y + 6, { align: "center" });
+      doc.setTextColor(0, 0, 0);
 
       const pdfBuffer = doc.output("arraybuffer");
       res.setHeader("Content-Type", "application/pdf");
@@ -1049,79 +1195,146 @@ export async function registerRoutes(
 
       const doc = new jsPDF();
       const pageWidth = doc.internal.pageSize.getWidth();
+      const pageHeight = doc.internal.pageSize.getHeight();
 
-      doc.setFontSize(24);
-      doc.text("INVOICE", pageWidth / 2, 30, { align: "center" });
-
-      doc.setFontSize(12);
-      doc.text("Rajiya Fashion", 20, 50);
-      doc.setFontSize(10);
-      doc.text("D.No. 7/394, Rayachur Street, Main Bazar", 20, 58);
-      doc.text("Tadipatri-515411", 20, 65);
-      doc.text("Phone: 9182720386", 20, 72);
-
-      doc.setFontSize(10);
-      doc.text(`Invoice #: ${billingEntry.id.slice(0, 8).toUpperCase()}`, pageWidth - 70, 50);
-      doc.text(`Date: ${new Date(billingEntry.createdAt).toLocaleDateString()}`, pageWidth - 70, 58);
-      doc.text(`Status: ${billingEntry.paid ? "PAID" : "PENDING"}`, pageWidth - 70, 65);
-
-      doc.setFontSize(12);
-      doc.text("Bill To:", 20, 85);
-      doc.setFontSize(10);
-      doc.text(client?.name || "", 20, 93);
-      doc.text(client?.phone || "", 20, 100);
-      if (client?.email) {
-        doc.text(client.email, 20, 107);
-      }
-      if (client?.address) {
-        doc.text(client.address, 20, 114);
-      }
-
-      let y = 140;
-      doc.setFontSize(10);
-      doc.setDrawColor(200);
-      doc.line(20, y, pageWidth - 20, y);
-      y += 5;
-
+      // Header with colored background box
+      doc.setFillColor(75, 85, 99);
+      doc.rect(0, 0, pageWidth, 50, "F");
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(28);
       doc.setFont(undefined, "bold");
-      doc.text("Description", 20, y);
-      doc.text("Amount", pageWidth - 50, y, { align: "right" });
-      doc.text("Status", pageWidth - 20, y, { align: "right" });
-      y += 5;
-      doc.line(20, y, pageWidth - 20, y);
-      y += 8;
-
+      doc.text("INVOICE", pageWidth / 2, 25, { align: "center" });
+      
+      doc.setFontSize(12);
       doc.setFont(undefined, "normal");
-      doc.text(billingEntry.description, 20, y);
-      doc.text(`₹${parseFloat(billingEntry.amount).toFixed(2)}`, pageWidth - 50, y, { align: "right" });
-      doc.text(billingEntry.paid ? "Paid" : "Pending", pageWidth - 20, y, { align: "right" });
-      y += 8;
+      doc.text("Premium Fashion Design Studio", pageWidth / 2, 35, { align: "center" });
 
+      doc.setTextColor(0, 0, 0);
+
+      // Company details box
+      let y = 60;
+      doc.setFillColor(249, 250, 251);
+      doc.roundedRect(20, y, pageWidth / 2 - 30, 40, 3, 3, "F");
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("From:", 25, y + 8);
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text("Rajiya Fashion", 25, y + 16);
+      doc.text("D.No. 7/394, Rayachur Street", 25, y + 23);
+      doc.text("Main Bazar, Tadipatri-515411", 25, y + 30);
+      doc.text("Phone: +91 9182720386", 25, y + 37);
+
+      // Invoice details box
+      doc.setFillColor(249, 250, 251);
+      doc.roundedRect(pageWidth / 2 + 10, y, pageWidth / 2 - 30, 40, 3, 3, "F");
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("Invoice Details", pageWidth / 2 + 15, y + 8);
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(`Invoice #: ${billingEntry.id.slice(0, 8).toUpperCase()}`, pageWidth / 2 + 15, y + 16);
+      doc.text(`Date: ${new Date(billingEntry.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, pageWidth / 2 + 15, y + 23);
+      const statusColor = billingEntry.paid ? [34, 197, 94] : [251, 191, 36];
+      doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
+      doc.setFont(undefined, "bold");
+      doc.text(`Status: ${billingEntry.paid ? "PAID" : "PENDING"}`, pageWidth / 2 + 15, y + 30);
+      doc.setTextColor(0, 0, 0);
       if (order) {
-        y += 5;
+        doc.setFont(undefined, "normal");
+        doc.text(`Order: ${order.id.slice(0, 8).toUpperCase()}`, pageWidth / 2 + 15, y + 37);
+      }
+
+      // Bill To section
+      y = 110;
+      doc.setFillColor(249, 250, 251);
+      doc.roundedRect(20, y, pageWidth - 40, 35, 3, 3, "F");
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("Bill To:", 25, y + 8);
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(client?.name || "", 25, y + 17);
+      doc.text(client?.phone || "", 25, y + 25);
+      if (client?.email) {
+        doc.text(client.email, 25, y + 33);
+      }
+
+      // Items table header
+      y = 155;
+      doc.setFillColor(75, 85, 99);
+      doc.roundedRect(20, y, pageWidth - 40, 12, 2, 2, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text("Description", 25, y + 8);
+      doc.text("Amount", pageWidth - 70, y + 8, { align: "right" });
+      doc.text("Status", pageWidth - 25, y + 8, { align: "right" });
+      doc.setTextColor(0, 0, 0);
+
+      // Item row
+      y += 15;
+      doc.setFillColor(249, 250, 251);
+      doc.rect(20, y - 5, pageWidth - 40, 25, "F");
+      
+      doc.setFontSize(10);
+      doc.setFont(undefined, "normal");
+      doc.text(billingEntry.description, 25, y);
+      
+      if (order) {
         doc.setFontSize(9);
         doc.setFont(undefined, "italic");
-        doc.text(`Related Order: ${order.design?.title || "N/A"}`, 20, y);
-        doc.text(`Order ID: ${order.id.slice(0, 8).toUpperCase()}`, 20, y + 6);
-        y += 15;
+        doc.setTextColor(100, 100, 100);
+        doc.text(`Related Order: ${order.design?.title || "N/A"}`, 25, y + 8);
+        doc.text(`Order ID: ${order.id.slice(0, 8).toUpperCase()}`, 25, y + 15);
+        doc.setTextColor(0, 0, 0);
       }
+      
+      doc.setFontSize(11);
+      doc.setFont(undefined, "bold");
+      doc.text(`₹${parseFloat(billingEntry.amount).toFixed(2)}`, pageWidth - 70, y, { align: "right" });
+      
+      const statusText = billingEntry.paid ? "Paid" : "Pending";
+      const statusTextColor = billingEntry.paid ? [34, 197, 94] : [251, 191, 36];
+      doc.setTextColor(statusTextColor[0], statusTextColor[1], statusTextColor[2]);
+      doc.text(statusText, pageWidth - 25, y, { align: "right" });
+      doc.setTextColor(0, 0, 0);
+      y += 30;
 
-      y += 5;
+      // Summary box
+      y += 10;
+      doc.setFillColor(241, 245, 249);
+      doc.roundedRect(pageWidth - 90, y, 70, 40, 3, 3, "F");
+      
+      doc.setDrawColor(200, 200, 200);
+      doc.line(pageWidth - 85, y + 15, pageWidth - 25, y + 15);
+
+      doc.setFontSize(10);
+      doc.setFont(undefined, "bold");
+      doc.text("Summary", pageWidth - 85, y + 10);
+      
+      doc.setFont(undefined, "normal");
+      doc.text("Total Amount:", pageWidth - 85, y + 23);
+      doc.text(`₹${parseFloat(billingEntry.amount).toFixed(2)}`, pageWidth - 25, y + 23, { align: "right" });
+      
+      doc.setFont(undefined, "bold");
+      doc.text("Payment Status:", pageWidth - 85, y + 38);
+      doc.setTextColor(statusTextColor[0], statusTextColor[1], statusTextColor[2]);
+      doc.text(billingEntry.paid ? "PAID" : "PENDING", pageWidth - 25, y + 38, { align: "right" });
+      doc.setTextColor(0, 0, 0);
+
+      // Footer
+      y = pageHeight - 30;
+      doc.setDrawColor(200, 200, 200);
       doc.line(20, y, pageWidth - 20, y);
       y += 10;
-
-      doc.setFont(undefined, "bold");
-      doc.setFontSize(10);
-      doc.text("Total Amount:", pageWidth - 80, y);
-      doc.text(`₹${parseFloat(billingEntry.amount).toFixed(2)}`, pageWidth - 20, y, { align: "right" });
-      y += 8;
-      doc.text("Payment Status:", pageWidth - 80, y);
-      doc.text(billingEntry.paid ? "PAID" : "PENDING", pageWidth - 20, y, { align: "right" });
-
-      y += 30;
-      doc.setFont(undefined, "normal");
       doc.setFontSize(9);
-      doc.text("Thank you for your business!", pageWidth / 2, y, { align: "center" });
+      doc.setFont(undefined, "italic");
+      doc.setTextColor(100, 100, 100);
+      doc.text("Thank you for your business! We appreciate your trust in Rajiya Fashion.", pageWidth / 2, y, { align: "center" });
+      doc.text("For any queries, please contact us at +91 9182720386", pageWidth / 2, y + 6, { align: "center" });
+      doc.setTextColor(0, 0, 0);
 
       const pdfBuffer = doc.output("arraybuffer");
       res.setHeader("Content-Type", "application/pdf");
