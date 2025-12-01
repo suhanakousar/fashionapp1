@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { storage } from "./storage";
+import { storage } from "./storage.js";
 import { jsPDF } from "jspdf";
 import archiver from "archiver";
 import { bookingFormSchema, insertBillingEntrySchema } from "@shared/schema";

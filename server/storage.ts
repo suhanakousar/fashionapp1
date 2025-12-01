@@ -24,7 +24,7 @@ import {
   type OrderWithDetails,
   generateId,
 } from "@shared/schema";
-import { getDb } from "./db";
+import { getDb } from "./db.js";
 import { ObjectId } from "mongodb";
 
 export interface IStorage {

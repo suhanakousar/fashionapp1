@@ -2,8 +2,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 import 'dotenv/config';
 import express, { type Request, Response, NextFunction } from 'express';
-import { registerRoutes } from '../server/routes';
-import { connect } from '../server/db';
+import { registerRoutes } from '../server/routes.js';
+import { connect } from '../server/db.js';
 import { createServer } from 'http';
 
 // Singleton pattern - initialize once, reuse for all requests
