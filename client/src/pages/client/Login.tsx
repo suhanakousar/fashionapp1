@@ -61,38 +61,28 @@ export default function ClientLogin() {
   // Generate device fingerprint on mount
   useEffect(() => {
     const generateFingerprint = () => {
-      const userAgent = navigator.userAgent;
-      const language = navigator.language;
-      const platform = navigator.platform;
-      const screen = `${screen.width}x${screen.height}`;
-      const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const fingerprint = `${userAgent}-${language}-${platform}-${screen}-${timezone}`;
-      // Simple hash
-      let hash = 0;
-      for (let i = 0; i < fingerprint.length; i++) {
-        const char = fingerprint.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32bit integer
+      try {
+        const userAgent = navigator.userAgent;
+        const language = navigator.language;
+        const platform = navigator.platform;
+        const screenSize = `${window.screen.width}x${window.screen.height}`;
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const fingerprint = `${userAgent}-${language}-${platform}-${screenSize}-${timezone}`;
+        // Simple hash
+        let hash = 0;
+        for (let i = 0; i < fingerprint.length; i++) {
+          const char = fingerprint.charCodeAt(i);
+          hash = ((hash << 5) - hash) + char;
+          hash = hash & hash; // Convert to 32bit integer
+        }
+        return Math.abs(hash).toString(36).substring(0, 32);
+      } catch (error) {
+        // Fallback if fingerprint generation fails
+        return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
       }
-      return Math.abs(hash).toString(36).substring(0, 32);
     };
     setDeviceFingerprint(generateFingerprint());
   }, []);
-
-  // Check for magic link token in URL
-  useEffect(() => {
-    const token = searchParams.get("token");
-    const phone = searchParams.get("phone");
-    const qrTokenParam = searchParams.get("qrToken");
-    
-    if (token && phone) {
-      // Auto-login with magic link
-      handleMagicLinkLogin(phone, token);
-    } else if (qrTokenParam && phone) {
-      // Auto-login with QR token
-      handleQRLogin(phone, qrTokenParam);
-    }
-  }, [searchString]);
 
   const handleMagicLinkLogin = async (phone: string, token: string) => {
     try {
@@ -143,6 +133,26 @@ export default function ClientLogin() {
       });
     }
   };
+
+  // Check for magic link token in URL
+  useEffect(() => {
+    try {
+      const token = searchParams.get("token");
+      const phone = searchParams.get("phone");
+      const qrTokenParam = searchParams.get("qrToken");
+      
+      if (token && phone) {
+        // Auto-login with magic link
+        handleMagicLinkLogin(phone, token);
+      } else if (qrTokenParam && phone) {
+        // Auto-login with QR token
+        handleQRLogin(phone, qrTokenParam);
+      }
+    } catch (error) {
+      console.error("Error processing URL parameters:", error);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchString]);
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
