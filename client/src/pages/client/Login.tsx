@@ -22,15 +22,15 @@ import { PublicLayout } from "@/components/PublicLayout";
 
 const loginSchema = z.object({
   phone: z.string().optional(),
-  email: z.string().email().optional().or(z.literal("")),
+  email: z.string().email("Invalid email address").optional().or(z.literal("")),
   otp: z.string().optional(),
   password: z.string().optional(),
-}).refine((data) => data.phone || data.email, {
+}).refine((data) => data.phone || (data.email && data.email !== ""), {
   message: "Phone number or email is required",
   path: ["phone"],
 }).refine((data) => {
   // If using email, need password
-  if (data.email && !data.phone) {
+  if (data.email && data.email !== "" && !data.phone) {
     return !!data.password;
   }
   // If using phone only, OTP or password is recommended but not required
@@ -570,11 +570,10 @@ export default function ClientLogin() {
                               }
                             }}
                           >
-                            🔒 Try Quick Login (if device is trusted)
+                            🔐 Try Quick Login (if device is trusted)
                           </Button>
                         )}
                       </>
-                    ) : (
                     ) : (
                       <>
                         <FormField
