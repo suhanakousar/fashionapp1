@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation, Link, useSearchParams } from "wouter";
+import { useLocation, Link, useSearch } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -45,7 +45,8 @@ type LoginFormData = z.infer<typeof loginSchema>;
 
 export default function ClientLogin() {
   const [, navigate] = useLocation();
-  const [searchParams] = useSearchParams();
+  const searchString = useSearch();
+  const searchParams = new URLSearchParams(searchString);
   const { toast } = useToast();
   const [isRequestingOTP, setIsRequestingOTP] = useState(false);
   const [otpSent, setOtpSent] = useState(false);
@@ -91,7 +92,7 @@ export default function ClientLogin() {
       // Auto-login with QR token
       handleQRLogin(phone, qrTokenParam);
     }
-  }, [searchParams]);
+  }, [searchString]);
 
   const handleMagicLinkLogin = async (phone: string, token: string) => {
     try {
