@@ -177,11 +177,16 @@ Thank you! 🙏`;
     orderId: string;
     price: string;
     preferredDate?: string;
+    magicLinkUrl?: string; // Optional magic link for instant login
   }): string {
     const orderNum = booking.orderId.slice(0, 8);
     const dateText = booking.preferredDate 
       ? `\n📅 Preferred Date: ${booking.preferredDate}`
       : "";
+
+    const loginLink = booking.magicLinkUrl 
+      ? `\n\n✨ INSTANT LOGIN (No OTP needed!):\n🔗 ${booking.magicLinkUrl}\n\nClick this link to access your client portal instantly and track your order!`
+      : `\n\n🔗 Access your orders: [Your website]/client/login`;
 
     return `Hello ${booking.clientName}! 👋
 
@@ -193,9 +198,7 @@ Thank you for your booking! We're excited to work with you.
 👗 Design: "${booking.designTitle}"
 💰 Amount: ₹${parseFloat(booking.price).toLocaleString()}${dateText}
 
-We'll review your order and get back to you soon. You can track your order status in our client portal.
-
-🔗 Access your orders: [Your website]/client/login
+We'll review your order and get back to you soon. You can track your order status in our client portal.${loginLink}
 
 Thank you for choosing us! 🙏
 

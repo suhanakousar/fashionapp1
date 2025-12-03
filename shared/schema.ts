@@ -59,6 +59,12 @@ export interface Client {
   password?: string; // For client portal login
   otp?: string; // For OTP-based login
   otpExpires?: Date; // OTP expiration
+  magicLinkToken?: string; // For magic link login
+  magicLinkExpires?: Date; // Magic link expiration
+  qrLoginToken?: string; // For QR code login
+  qrLoginExpires?: Date; // QR code expiration
+  trustedDevices?: string[]; // Device fingerprints for trusted devices
+  lastLoginAt?: Date; // Last login timestamp
   createdAt: Date;
 }
 

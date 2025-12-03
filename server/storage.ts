@@ -52,6 +52,7 @@ export interface IStorage {
   getClients(): Promise<ClientWithDetails[]>;
   getClient(id: string): Promise<ClientWithDetails | undefined>;
   getClientByPhone(phone: string): Promise<Client | undefined>;
+  getClientByEmail(email: string): Promise<Client | undefined>;
   createClient(client: InsertClient): Promise<Client>;
   updateClient(id: string, data: Partial<Client>): Promise<Client | undefined>;
   deleteAllClients(): Promise<void>;
@@ -155,6 +156,10 @@ function toClient(doc: any): Client {
     password: doc.password,
     otp: doc.otp,
     otpExpires: doc.otpExpires,
+    magicLinkToken: doc.magicLinkToken,
+    magicLinkExpires: doc.magicLinkExpires,
+    qrLoginToken: doc.qrLoginToken,
+    qrLoginExpires: doc.qrLoginExpires,
     createdAt: doc.createdAt || new Date(),
   };
 }
@@ -583,6 +588,12 @@ export class DatabaseStorage implements IStorage {
   async getClientByPhone(phone: string): Promise<Client | undefined> {
     const db = await this.getDb();
     const doc = await db.collection("clients").findOne({ phone });
+    return doc ? toClient(doc) : undefined;
+  }
+
+  async getClientByEmail(email: string): Promise<Client | undefined> {
+    const db = await this.getDb();
+    const doc = await db.collection("clients").findOne({ email });
     return doc ? toClient(doc) : undefined;
   }
 

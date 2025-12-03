@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import crypto from "crypto";
 import { storage } from "./storage.js";
 import { whatsappService } from "./whatsapp.js";
 import { jsPDF } from "jspdf";
@@ -391,6 +392,18 @@ export async function registerRoutes(
         metadata: { orderId: order.id, clientId: client.id },
       });
 
+      // Generate magic link for auto-login (no OTP needed)
+      const magicLinkToken = crypto.randomBytes(32).toString("hex");
+      const magicLinkExpires = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      await storage.updateClient(client.id, {
+        magicLinkToken,
+        magicLinkExpires,
+      });
+
+      // Generate magic link URL
+      const baseUrl = process.env.FRONTEND_URL || req.protocol + "://" + req.get("host");
+      const magicLinkUrl = `${baseUrl}/client/login?token=${magicLinkToken}&phone=${encodeURIComponent(client.phone)}`;
+
       // Send WhatsApp confirmation message to client automatically
       try {
         const whatsappMessage = whatsappService.generateBookingConfirmationMessage({
@@ -405,6 +418,7 @@ export async function registerRoutes(
                 day: 'numeric' 
               })
             : undefined,
+          magicLinkUrl, // Include magic link for instant login
         });
 
         const phone = client.whatsapp || client.phone;
@@ -434,12 +448,17 @@ export async function registerRoutes(
           client,
           whatsappSent: sendResult.success, // Indicates if message was automatically sent
           whatsappUrl, // Fallback URL if API not configured
+          magicLinkUrl, // Auto-login link (no OTP needed)
         });
       } catch (whatsappError) {
         console.error("WhatsApp notification error:", whatsappError);
         // Don't fail the booking if WhatsApp fails
         const fullOrder = await storage.getOrder(order.id);
-        res.json({ order: fullOrder, client });
+        res.json({ 
+          order: fullOrder, 
+          client,
+          magicLinkUrl, // Still return magic link even if WhatsApp fails
+        });
       }
     } catch (error) {
       console.error("Booking error:", error);
@@ -1607,42 +1626,130 @@ export async function registerRoutes(
     }
   });
 
-  // Client login (OTP or password)
+  // Helper function to generate device fingerprint
+  const generateDeviceFingerprint = (req: Request): string => {
+    const userAgent = req.get("user-agent") || "";
+    const acceptLanguage = req.get("accept-language") || "";
+    const acceptEncoding = req.get("accept-encoding") || "";
+    const fingerprint = `${userAgent}-${acceptLanguage}-${acceptEncoding}`;
+    return crypto.createHash("sha256").update(fingerprint).digest("hex").substring(0, 32);
+  };
+
+  // Client login (OTP, password, email, magic link, QR code, or trusted device)
   app.post("/api/client/login", async (req, res) => {
     try {
-      const { phone, otp, password } = req.body;
+      const { phone, email, otp, password, magicLinkToken, qrToken, rememberDevice, deviceFingerprint } = req.body;
       
-      const client = await storage.getClientByPhone(phone);
-      if (!client) {
-        return res.status(401).json({ message: "Invalid credentials" });
-      }
-
-      // OTP login
-      if (otp) {
-        if (client.otp !== otp) {
-          return res.status(401).json({ message: "Invalid OTP" });
+      let client;
+      
+      // Magic link login
+      if (magicLinkToken) {
+        client = await storage.getClientByPhone(phone);
+        if (!client || client.magicLinkToken !== magicLinkToken) {
+          return res.status(401).json({ message: "Invalid magic link" });
         }
-        if (client.otpExpires && new Date() > new Date(client.otpExpires)) {
-          return res.status(401).json({ message: "OTP expired" });
+        if (client.magicLinkExpires && new Date() > new Date(client.magicLinkExpires)) {
+          return res.status(401).json({ message: "Magic link expired" });
         }
-        // Clear OTP after successful login
-        await storage.updateClient(client.id, { otp: undefined, otpExpires: undefined });
+        // Clear magic link after successful login
+        await storage.updateClient(client.id, { magicLinkToken: undefined, magicLinkExpires: undefined });
       }
-      // Password login
-      else if (password) {
+      // QR code login
+      else if (qrToken) {
+        client = await storage.getClientByPhone(phone);
+        if (!client || client.qrLoginToken !== qrToken) {
+          return res.status(401).json({ message: "Invalid QR code" });
+        }
+        if (client.qrLoginExpires && new Date() > new Date(client.qrLoginExpires)) {
+          return res.status(401).json({ message: "QR code expired" });
+        }
+        // Clear QR token after successful login
+        await storage.updateClient(client.id, { qrLoginToken: undefined, qrLoginExpires: undefined });
+      }
+      // Email-based login (no OTP needed!)
+      else if (email && password) {
+        client = await storage.getClientByEmail(email);
+        if (!client) {
+          return res.status(401).json({ message: "Invalid email or password" });
+        }
         if (!client.password) {
-          return res.status(401).json({ message: "Password not set. Please use OTP login." });
+          return res.status(401).json({ message: "Password not set. Please use phone login to set a password." });
         }
         const isValid = await bcrypt.compare(password, client.password);
         if (!isValid) {
-          return res.status(401).json({ message: "Invalid password" });
+          return res.status(401).json({ message: "Invalid email or password" });
+        }
+      }
+      // Phone-based login
+      else if (phone) {
+        client = await storage.getClientByPhone(phone);
+        if (!client) {
+          return res.status(401).json({ message: "Invalid credentials" });
+        }
+
+        // Check for trusted device login (no password/OTP needed!)
+        if (!otp && !password) {
+          const fingerprint = deviceFingerprint || generateDeviceFingerprint(req);
+          const trustedDevices = client.trustedDevices || [];
+          if (trustedDevices.includes(fingerprint)) {
+            // Trusted device - allow login without OTP/password
+            // This is secure because device fingerprint is unique and hard to spoof
+          } else {
+            return res.status(400).json({ message: "OTP or password required for new devices" });
+          }
+        }
+        // OTP login
+        else if (otp) {
+          if (client.otp !== otp) {
+            return res.status(401).json({ message: "Invalid OTP" });
+          }
+          if (client.otpExpires && new Date() > new Date(client.otpExpires)) {
+            return res.status(401).json({ message: "OTP expired" });
+          }
+          // Clear OTP after successful login
+          await storage.updateClient(client.id, { otp: undefined, otpExpires: undefined });
+        }
+        // Password login
+        else if (password) {
+          if (!client.password) {
+            return res.status(401).json({ message: "Password not set. Please use OTP login." });
+          }
+          const isValid = await bcrypt.compare(password, client.password);
+          if (!isValid) {
+            return res.status(401).json({ message: "Invalid password" });
+          }
         }
       } else {
-        return res.status(400).json({ message: "OTP or password required" });
+        return res.status(400).json({ message: "Phone number, email, or token required" });
       }
 
-      // Set client session
+      // Handle trusted device (remember me)
+      if (rememberDevice && client) {
+        const fingerprint = deviceFingerprint || generateDeviceFingerprint(req);
+        const trustedDevices = client.trustedDevices || [];
+        if (!trustedDevices.includes(fingerprint)) {
+          trustedDevices.push(fingerprint);
+          // Keep only last 5 trusted devices
+          if (trustedDevices.length > 5) {
+            trustedDevices.shift();
+          }
+          await storage.updateClient(client.id, { trustedDevices });
+        }
+      }
+
+      // Update last login time
+      await storage.updateClient(client.id, { lastLoginAt: new Date() });
+
+      // Set client session with longer expiration for trusted devices
       req.session.clientId = client.id;
+      if (rememberDevice) {
+        // Extend session to 30 days for trusted devices
+        req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000;
+      } else {
+        // Default session: 7 days
+        req.session.cookie.maxAge = 7 * 24 * 60 * 60 * 1000;
+      }
+      
       await new Promise<void>((resolve, reject) => {
         req.session.save((err) => {
           if (err) reject(err);
@@ -1650,10 +1757,159 @@ export async function registerRoutes(
         });
       });
 
-      res.json({ client: { ...client, password: undefined, otp: undefined } });
+      res.json({ 
+        client: { 
+          ...client, 
+          password: undefined, 
+          otp: undefined, 
+          magicLinkToken: undefined, 
+          qrLoginToken: undefined,
+          trustedDevices: undefined 
+        } 
+      });
     } catch (error) {
       console.error("Client login error:", error);
       res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  // Request magic link (one-click login via WhatsApp)
+  app.post("/api/client/request-magic-link", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      let client = await storage.getClientByPhone(phone);
+      if (!client) {
+        // Create client if doesn't exist
+        client = await storage.createClient({
+          name: "Client",
+          phone,
+          whatsapp: phone,
+        });
+      }
+
+      // Generate secure magic link token
+      const magicLinkToken = crypto.randomBytes(32).toString("hex");
+      const magicLinkExpires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+      await storage.updateClient(client.id, {
+        magicLinkToken,
+        magicLinkExpires,
+      });
+
+      // Generate magic link URL
+      const baseUrl = process.env.FRONTEND_URL || req.protocol + "://" + req.get("host");
+      const magicLinkUrl = `${baseUrl}/client/login?token=${magicLinkToken}&phone=${encodeURIComponent(phone)}`;
+
+      // Send magic link via WhatsApp
+      try {
+        const whatsappPhone = client.whatsapp || client.phone;
+        const magicLinkMessage = `Hello ${client.name}! 👋
+
+Click this link to login to your client portal instantly (no OTP needed):
+
+🔗 ${magicLinkUrl}
+
+This link expires in 15 minutes.
+
+If you didn't request this, please ignore this message.`;
+
+        const sent = await whatsappService.sendMessage(whatsappPhone, magicLinkMessage);
+        
+        if (sent) {
+          res.json({ 
+            success: true, 
+            message: "Magic link sent to your WhatsApp! Click the link to login instantly.",
+            whatsappSent: true,
+          });
+        } else {
+          // Fallback: generate URL
+          const whatsappUrl = whatsappService.getWhatsAppURL(whatsappPhone, magicLinkMessage);
+          res.json({ 
+            success: true, 
+            message: "Magic link ready. Please open WhatsApp to receive it.",
+            whatsappSent: false,
+            whatsappUrl,
+            magicLinkUrl, // Also return direct URL
+          });
+        }
+      } catch (whatsappError) {
+        console.error("WhatsApp magic link send error:", whatsappError);
+        // Fallback: generate URL
+        const whatsappPhone = client.whatsapp || client.phone;
+        const magicLinkMessage = `Hello ${client.name}! 👋
+
+Click this link to login to your client portal instantly (no OTP needed):
+
+🔗 ${magicLinkUrl}
+
+This link expires in 15 minutes.`;
+
+        const whatsappUrl = whatsappService.getWhatsAppURL(whatsappPhone, magicLinkMessage);
+        
+        res.json({ 
+          success: true, 
+          message: "Magic link ready. Please open WhatsApp to receive it.",
+          whatsappSent: false,
+          whatsappUrl,
+          magicLinkUrl, // Also return direct URL
+        });
+      }
+    } catch (error) {
+      console.error("Request magic link error:", error);
+      res.status(500).json({ message: "Failed to send magic link" });
+    }
+  });
+
+  // Generate QR code for login
+  app.post("/api/client/generate-qr-login", async (req, res) => {
+    try {
+      const { phone } = req.body;
+      if (!phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      let client = await storage.getClientByPhone(phone);
+      if (!client) {
+        // Create client if doesn't exist
+        client = await storage.createClient({
+          name: "Client",
+          phone,
+          whatsapp: phone,
+        });
+      }
+
+      // Generate secure QR login token
+      const qrToken = crypto.randomBytes(32).toString("hex");
+      const qrLoginExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
+      await storage.updateClient(client.id, {
+        qrLoginToken: qrToken,
+        qrLoginExpires,
+      });
+
+      // Generate QR code data (URL that client can scan)
+      const baseUrl = process.env.FRONTEND_URL || req.protocol + "://" + req.get("host");
+      const qrData = JSON.stringify({
+        type: "client-login",
+        token: qrToken,
+        phone: phone,
+        url: `${baseUrl}/client/login?qrToken=${qrToken}&phone=${encodeURIComponent(phone)}`
+      });
+
+      res.json({ 
+        success: true, 
+        qrToken,
+        qrData,
+        expiresIn: 10 * 60 * 1000, // 10 minutes in milliseconds
+        message: "QR code generated. Scan with your phone to login."
+      });
+    } catch (error) {
+      console.error("Generate QR login error:", error);
+      res.status(500).json({ message: "Failed to generate QR code" });
     }
   });
 

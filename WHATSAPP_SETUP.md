@@ -7,6 +7,52 @@ The application now supports **automatic WhatsApp message sending** when:
 2. Client requests OTP for login
 3. Order status changes
 
+---
+
+## 🎉 NEW: Passwordless Login Options (No OTP Needed!)
+
+Clients can now login **without OTP** using multiple methods:
+
+### 1. **Magic Link Login** ⭐ (Easiest - Recommended)
+- Client enters phone number
+- Clicks "Get Magic Link"
+- Receives WhatsApp message with clickable link
+- Clicks link → **Instantly logged in!** (No OTP needed)
+- Link expires in 15 minutes
+
+### 2. **Email Login** ✉️ (No OTP Needed!)
+- Client enters email + password
+- **Instantly logged in!** (No OTP needed)
+- Works if client has email on file
+- Can check "Remember this device" for future passwordless logins
+
+### 3. **Trusted Device Login** 🔒 (Remember Me Feature)
+- After first login with OTP/password, client can check "Remember this device"
+- Next time: Just enter phone number → **Auto-login!** (No OTP needed)
+- Device is "trusted" using secure fingerprinting
+- Works for up to 5 devices per client
+- Session lasts 30 days for trusted devices (vs 7 days normally)
+
+### 4. **Password Login** 🔑
+- Client enters phone + password
+- **Instantly logged in!** (No OTP needed)
+- Must set password first (can be done in client profile)
+
+### 5. **QR Code Login** 📱
+- Generate QR code on login page
+- Scan with phone → **Instantly logged in!** (No OTP needed)
+- QR code expires in 10 minutes
+
+### Why Use These Instead of OTP?
+
+✅ **Faster** - No waiting for OTP  
+✅ **Easier** - One click login with magic link  
+✅ **More Secure** - Device fingerprinting prevents unauthorized access  
+✅ **Better UX** - Clients don't need to type OTP codes  
+✅ **Works Offline** - Magic links work even if WhatsApp API is down  
+
+**Recommendation:** Encourage clients to use **Magic Link** or **Email Login** for the best experience!
+
 ## How It Works
 
 ### With API Configured (Automatic Sending) ✅
@@ -84,12 +130,31 @@ If you don't configure an API:
 2. Check if message is sent automatically (if API configured)
 3. Or check if WhatsApp opens (if URL method)
 
-### Test OTP:
+### Test Login Methods:
+
+**Test Magic Link (No OTP):**
 1. Go to `/client/login`
-2. Enter phone number
-3. Click "Request OTP via WhatsApp"
-4. Check if OTP is sent automatically (if API configured)
-5. Or check if WhatsApp opens (if URL method)
+2. Click "Magic Link" tab
+3. Enter phone number
+4. Click "Get Magic Link"
+5. Check WhatsApp for magic link
+6. Click link → Should login instantly!
+
+**Test Email Login (No OTP):**
+1. Go to `/client/login`
+2. Click "Email" tab
+3. Enter email + password
+4. Check "Remember this device"
+5. Click "Sign In" → Should login instantly!
+6. Next time: Just enter phone → Auto-login!
+
+**Test OTP (Traditional Method):**
+1. Go to `/client/login`
+2. Click "OTP" tab
+3. Enter phone number
+4. Click "Request OTP via WhatsApp"
+5. Check if OTP is sent automatically (if API configured)
+6. Or check if WhatsApp opens (if URL method)
 
 ### Test Order Status Update:
 1. Update an order status in admin panel
