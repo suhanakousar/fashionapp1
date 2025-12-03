@@ -8,6 +8,8 @@ import {
   ArrowRight,
   Package,
   Calendar,
+  DollarSign,
+  CreditCard,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -16,14 +18,15 @@ import { StatusBadge } from "@/components/StatusBadge";
 import { EmptyState } from "@/components/EmptyState";
 import { PageLoader } from "@/components/LoadingSpinner";
 import { PublicLayout } from "@/components/PublicLayout";
-import type { OrderWithDetails } from "@shared/schema";
+import type { OrderWithDetails, ClientWithDetails } from "@shared/schema";
 import { format } from "date-fns";
 import { ORDER_STATUS_LABELS } from "@shared/schema";
 
 export default function ClientDashboard() {
-  const { data: client } = useQuery({
+  const { data: clientData } = useQuery<{ client: ClientWithDetails }>({
     queryKey: ["/api/client/me"],
   });
+  const client = clientData?.client;
 
   const { data: orders = [], isLoading: ordersLoading } = useQuery<OrderWithDetails[]>({
     queryKey: ["/api/client/orders"],
@@ -60,7 +63,7 @@ export default function ClientDashboard() {
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3 mb-8">
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
             <Card className="hover-elevate cursor-pointer">
               <Link href="/client/orders">
                 <CardHeader className="flex flex-row items-center justify-between pb-2">
@@ -97,26 +100,38 @@ export default function ClientDashboard() {
               </Link>
             </Card>
 
-            <Card className="hover-elevate cursor-pointer">
-              <Link href="/client/messages">
-                <CardHeader className="flex flex-row items-center justify-between pb-2">
-                  <CardTitle className="text-sm font-medium text-muted-foreground">
-                    Messages
-                  </CardTitle>
-                  <MessageSquare className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                  {unreadCount > 0 && (
-                    <Badge variant="destructive" className="ml-2">
-                      {unreadCount}
-                    </Badge>
-                  )}
-                </CardHeader>
-                <CardContent>
-                  <div className="text-3xl font-bold">{unreadCount}</div>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Unread messages
-                  </p>
-                </CardContent>
-              </Link>
+            <Card className="hover-elevate">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Paid
+                </CardTitle>
+                <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  ₹{client?.totalSpent?.toFixed(2) || "0.00"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Amount paid
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card className="hover-elevate">
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Outstanding
+                </CardTitle>
+                <CreditCard className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold">
+                  ₹{client?.outstandingBalance?.toFixed(2) || "0.00"}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Pending balance
+                </p>
+              </CardContent>
             </Card>
           </div>
 
