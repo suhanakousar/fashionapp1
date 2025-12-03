@@ -27,6 +27,8 @@ import ClientDashboard from "@/pages/client/Dashboard";
 import ClientOrders from "@/pages/client/Orders";
 import ClientOrderDetail from "@/pages/client/OrderDetail";
 import ClientMessages from "@/pages/client/Messages";
+import ClientBilling from "@/pages/client/Billing";
+import ClientProfile from "@/pages/client/Profile";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -91,6 +93,8 @@ function Router() {
       <Route path="/client/orders" component={ClientOrders} />
       <Route path="/client/orders/:id" component={ClientOrderDetail} />
       <Route path="/client/messages" component={ClientMessages} />
+      <Route path="/client/billing" component={ClientBilling} />
+      <Route path="/client/profile" component={ClientProfile} />
       
       {/* Fallback to 404 */}
       <Route component={NotFound} />

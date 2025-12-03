@@ -10,6 +10,9 @@ import {
   Calendar,
   DollarSign,
   CreditCard,
+  TrendingUp,
+  Activity,
+  Clock,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,6 +52,18 @@ export default function ClientDashboard() {
   const activeOrders = orders.filter(
     (o) => o.status !== "delivered"
   );
+  
+  // Calculate statistics
+  const totalOrders = orders.length;
+  const completedOrders = orders.filter((o) => o.status === "delivered").length;
+  const inProgressOrders = orders.filter((o) => 
+    o.status === "accepted" || o.status === "in_progress" || o.status === "ready_for_delivery"
+  ).length;
+  
+  // Get recent activity (last 5 orders)
+  const recentActivity = orders
+    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+    .slice(0, 5);
 
   return (
     <PublicLayout>
@@ -135,6 +150,38 @@ export default function ClientDashboard() {
             </Card>
           </div>
 
+          {/* Statistics Overview */}
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5" />
+                Order Statistics
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="text-center p-4 rounded-lg bg-muted">
+                  <div className="text-2xl font-bold">{totalOrders}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Total Orders</div>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-blue-50 dark:bg-blue-950/20">
+                  <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{inProgressOrders}</div>
+                  <div className="text-xs text-muted-foreground mt-1">In Progress</div>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-green-50 dark:bg-green-950/20">
+                  <div className="text-2xl font-bold text-green-600 dark:text-green-400">{completedOrders}</div>
+                  <div className="text-xs text-muted-foreground mt-1">Completed</div>
+                </div>
+                <div className="text-center p-4 rounded-lg bg-amber-50 dark:bg-amber-950/20">
+                  <div className="text-2xl font-bold text-amber-600 dark:text-amber-400">
+                    {orders.filter((o) => o.status === "requested").length}
+                  </div>
+                  <div className="text-xs text-muted-foreground mt-1">Pending</div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
           <div className="grid gap-6 lg:grid-cols-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
@@ -189,6 +236,50 @@ export default function ClientDashboard() {
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle className="flex items-center gap-2">
+                  <Activity className="h-5 w-5" />
+                  Recent Activity
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                {recentActivity.length === 0 ? (
+                  <EmptyState
+                    icon={Activity}
+                    title="No activity yet"
+                    description="Your order activity will appear here"
+                  />
+                ) : (
+                  <div className="space-y-3">
+                    {recentActivity.map((order) => (
+                      <Link
+                        key={order.id}
+                        href={`/client/orders/${order.id}`}
+                      >
+                        <div className="flex items-start gap-3 p-3 rounded-lg border hover-elevate cursor-pointer">
+                          <div className="mt-1">
+                            <Clock className="h-4 w-4 text-muted-foreground" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {order.design?.title}
+                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                              <StatusBadge status={order.status} size="sm" />
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(order.createdAt), "MMM d, yyyy")}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Quick Actions</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -207,7 +298,7 @@ export default function ClientDashboard() {
                 <Link href="/client/billing">
                   <Button variant="outline" className="w-full justify-start gap-2">
                     <Receipt className="h-4 w-4" />
-                    Billing & Invoices
+                    Billing & Payments
                   </Button>
                 </Link>
                 <Link href="/client/messages">
@@ -219,6 +310,12 @@ export default function ClientDashboard() {
                         {unreadCount}
                       </Badge>
                     )}
+                  </Button>
+                </Link>
+                <Link href="/client/profile">
+                  <Button variant="outline" className="w-full justify-start gap-2">
+                    <Ruler className="h-4 w-4" />
+                    My Profile
                   </Button>
                 </Link>
               </CardContent>
