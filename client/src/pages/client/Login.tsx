@@ -57,6 +57,7 @@ export default function ClientLogin() {
   const [qrToken, setQrToken] = useState<string | null>(null);
   const [rememberDevice, setRememberDevice] = useState(false);
   const [deviceFingerprint, setDeviceFingerprint] = useState<string | null>(null);
+  const [magicLinkUrl, setMagicLinkUrl] = useState<string | null>(null);
 
   // Generate device fingerprint on mount
   useEffect(() => {
@@ -231,33 +232,24 @@ export default function ClientLogin() {
       if (data.success) {
         setMagicLinkSent(true);
         
-        if (data.whatsappSent) {
+        // Store the magic link URL to display on page
+        if (data.magicLinkUrl) {
+          setMagicLinkUrl(data.magicLinkUrl);
+          
           toast({
-            title: "Magic Link Sent! ✨",
-            description: "Check your WhatsApp and click the link to login instantly - no OTP needed!",
-          });
-        } else if (data.whatsappUrl) {
-          window.open(data.whatsappUrl, "_blank");
-          toast({
-            title: "Magic Link Ready",
-            description: "Check WhatsApp for your magic link. Click it to login instantly!",
+            title: "Magic Link Generated! ✨",
+            description: data.whatsappSent 
+              ? "Check your WhatsApp for the link, or click the button below to login instantly!"
+              : "Click the button below to login instantly (no OTP needed)!",
           });
         }
         
-        // Also show the link directly if available
-        if (data.magicLinkUrl) {
-          toast({
-            title: "Or click here",
-            description: "You can also click this link directly",
-            action: (
-              <Button
-                size="sm"
-                onClick={() => window.open(data.magicLinkUrl, "_self")}
-              >
-                Open Link
-              </Button>
-            ),
-          });
+        // Also try to open WhatsApp if URL is available
+        if (data.whatsappUrl && !data.whatsappSent) {
+          // Open WhatsApp in new tab after a short delay
+          setTimeout(() => {
+            window.open(data.whatsappUrl, "_blank");
+          }, 500);
         }
       }
     } catch (error: any) {
@@ -406,25 +398,59 @@ export default function ClientLogin() {
                         </p>
                       </>
                     ) : (
-                      <div className="space-y-2 p-4 bg-muted rounded-lg">
+                      <div className="space-y-3 p-4 bg-gradient-to-br from-purple-50 to-pink-50 dark:from-purple-950/20 dark:to-pink-950/20 rounded-lg border border-purple-200 dark:border-purple-800">
                         <p className="text-sm text-center font-medium">
-                          ✅ Magic link sent to your WhatsApp!
+                          ✅ Magic link generated!
                         </p>
                         <p className="text-xs text-center text-muted-foreground">
-                          Check your WhatsApp and click the link to login instantly.
+                          {magicLinkUrl 
+                            ? "Click the button below to login instantly (no OTP needed)!"
+                            : "Check your WhatsApp for the magic link."}
                         </p>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          className="w-full"
-                          onClick={() => {
-                            setMagicLinkSent(false);
-                            form.setValue("phone", "");
-                          }}
-                        >
-                          Try different number
-                        </Button>
+                        {magicLinkUrl && (
+                          <Button
+                            type="button"
+                            className="w-full gap-2 bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white"
+                            onClick={() => {
+                              window.location.href = magicLinkUrl;
+                            }}
+                          >
+                            <LinkIcon className="h-4 w-4" />
+                            🔗 Login Instantly (No OTP!)
+                          </Button>
+                        )}
+                        <div className="flex gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                            onClick={() => {
+                              setMagicLinkSent(false);
+                              setMagicLinkUrl(null);
+                              form.setValue("phone", "");
+                            }}
+                          >
+                            Try different number
+                          </Button>
+                          {magicLinkUrl && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="flex-1"
+                              onClick={() => {
+                                navigator.clipboard.writeText(magicLinkUrl);
+                                toast({
+                                  title: "Link copied!",
+                                  description: "Magic link copied to clipboard",
+                                });
+                              }}
+                            >
+                              Copy Link
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </form>

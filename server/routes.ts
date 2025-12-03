@@ -1819,21 +1819,25 @@ If you didn't request this, please ignore this message.`;
 
         const sent = await whatsappService.sendMessage(whatsappPhone, magicLinkMessage);
         
-        if (sent) {
+        // Always return the magic link URL so user can click it directly
+        const whatsappUrl = whatsappService.getWhatsAppURL(whatsappPhone, magicLinkMessage);
+        
+        if (sent && sent.success) {
           res.json({ 
             success: true, 
             message: "Magic link sent to your WhatsApp! Click the link to login instantly.",
             whatsappSent: true,
+            whatsappUrl,
+            magicLinkUrl, // Always include direct link
           });
         } else {
           // Fallback: generate URL
-          const whatsappUrl = whatsappService.getWhatsAppURL(whatsappPhone, magicLinkMessage);
           res.json({ 
             success: true, 
             message: "Magic link ready. Please open WhatsApp to receive it.",
             whatsappSent: false,
             whatsappUrl,
-            magicLinkUrl, // Also return direct URL
+            magicLinkUrl, // Always include direct link
           });
         }
       } catch (whatsappError) {
@@ -1855,7 +1859,7 @@ This link expires in 15 minutes.`;
           message: "Magic link ready. Please open WhatsApp to receive it.",
           whatsappSent: false,
           whatsappUrl,
-          magicLinkUrl, // Also return direct URL
+          magicLinkUrl, // Always return direct URL so user can click it
         });
       }
     } catch (error) {
