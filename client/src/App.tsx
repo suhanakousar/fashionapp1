@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/lib/theme";
 import { AuthProvider } from "@/lib/auth";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
 
 import Home from "@/pages/Home";
 import About from "@/pages/About";
@@ -29,6 +30,7 @@ import ClientOrderDetail from "@/pages/client/OrderDetail";
 import ClientMessages from "@/pages/client/Messages";
 import ClientBilling from "@/pages/client/Billing";
 import ClientProfile from "@/pages/client/Profile";
+import Fusion from "@/pages/Fusion";
 import NotFound from "@/pages/not-found";
 
 function Router() {
@@ -41,6 +43,7 @@ function Router() {
       <Route path="/design/:id" component={DesignDetail} />
       <Route path="/book/:designId" component={Booking} />
       <Route path="/booking/confirm/:orderId" component={BookingConfirmation} />
+      <Route path="/fusion" component={Fusion} />
       
       {/* Auth Route */}
       <Route path="/admin/login" component={Login} />
@@ -104,16 +107,36 @@ function Router() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <AuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Router />
-          </TooltipProvider>
-        </AuthProvider>
-      </ThemeProvider>
-    </QueryClientProvider>
+    <ErrorBoundary>
+      <QueryClientProvider client={queryClient}>
+        <ThemeProvider>
+          <AuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              {/* ARIA live region for screen reader announcements */}
+              <div
+                id="aria-live-region"
+                aria-live="polite"
+                aria-atomic="true"
+                className="sr-only"
+                style={{
+                  position: "absolute",
+                  width: "1px",
+                  height: "1px",
+                  padding: 0,
+                  margin: "-1px",
+                  overflow: "hidden",
+                  clip: "rect(0, 0, 0, 0)",
+                  whiteSpace: "nowrap",
+                  borderWidth: 0,
+                }}
+              />
+              <Router />
+            </TooltipProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 

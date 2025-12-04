@@ -1,6 +1,9 @@
 import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
+// Initialize Web Vitals tracking (optional, requires web-vitals package)
+// import { initWebVitals } from "./lib/webVitals";
+// initWebVitals();
 
 // Service worker registration
 if ('serviceWorker' in navigator) {

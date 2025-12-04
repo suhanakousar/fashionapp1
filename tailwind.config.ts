@@ -96,10 +96,41 @@ export default {
           from: { height: "var(--radix-accordion-content-height)" },
           to: { height: "0" },
         },
+        "stitch-pulse": {
+          "0%, 100%": { opacity: "0.6", transform: "scale(1)" },
+          "50%": { opacity: "1", transform: "scale(1.05)" },
+        },
+        "fog-drift": {
+          "0%": { transform: "translateX(-10%) translateY(-10%)" },
+          "100%": { transform: "translateX(10%) translateY(10%)" },
+        },
+        "glow-pulse": {
+          "0%, 100%": { boxShadow: "0 0 20px rgba(255, 111, 177, 0.3)" },
+          "50%": { boxShadow: "0 0 40px rgba(255, 111, 177, 0.6)" },
+        },
+        "fabric-fold": {
+          "0%": { transform: "rotateY(0deg) scale(1)" },
+          "50%": { transform: "rotateY(5deg) scale(1.02)" },
+          "100%": { transform: "rotateY(0deg) scale(1)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "stitch-pulse": "stitch-pulse 2s ease-in-out infinite",
+        "fog-drift": "fog-drift 20s ease-in-out infinite alternate",
+        "glow-pulse": "glow-pulse 3s ease-in-out infinite",
+        "fabric-fold": "fabric-fold 0.5s ease-in-out",
+      },
+      boxShadow: {
+        "kiro-glow": "0 0 20px rgba(255, 111, 177, 0.4), 0 0 40px rgba(155, 89, 255, 0.2)",
+        "kiro-glow-lg": "0 0 40px rgba(255, 111, 177, 0.6), 0 0 80px rgba(155, 89, 255, 0.3)",
+        "kiro-vignette": "inset 0 0 200px rgba(11, 15, 18, 0.8)",
+      },
+      spacing: {
+        "motion-fast": "150ms",
+        "motion-regular": "300ms",
+        "motion-slow": "500ms",
       },
     },
   },

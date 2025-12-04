@@ -1,21 +1,52 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { AlertCircle } from "lucide-react";
+import { Link } from "wouter";
+import { Button } from "@/components/ui/button";
+import { Home, Sparkles, ArrowLeft } from "lucide-react";
+import { PublicLayout } from "@/components/PublicLayout";
 
 export default function NotFound() {
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
-      <Card className="w-full max-w-md mx-4">
-        <CardContent className="pt-6">
-          <div className="flex mb-4 gap-2">
-            <AlertCircle className="h-8 w-8 text-red-500" />
-            <h1 className="text-2xl font-bold text-gray-900">404 Page Not Found</h1>
+    <PublicLayout>
+      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+        <div className="max-w-md w-full text-center space-y-6">
+          <div className="space-y-2">
+            <h1 className="font-serif text-6xl md:text-8xl font-bold text-primary">404</h1>
+            <h2 className="text-2xl md:text-3xl font-semibold">Page Not Found</h2>
+            <p className="text-muted-foreground">
+              The page you're looking for doesn't exist or has been moved.
+            </p>
           </div>
 
-          <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Link href="/">
+              <Button size="lg" className="gap-2">
+                <Home className="h-4 w-4" />
+                Go Home
+              </Button>
+            </Link>
+            <Link href="/fusion">
+              <Button size="lg" variant="outline" className="gap-2">
+                <Sparkles className="h-4 w-4" />
+                Try Fusion
+              </Button>
+            </Link>
+          </div>
+
+          <div className="pt-8 border-t border-border">
+            <p className="text-sm text-muted-foreground">
+              Or go back to where you came from
+            </p>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => window.history.back()}
+              className="gap-2 mt-2"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Go Back
+            </Button>
+          </div>
+        </div>
+      </div>
+    </PublicLayout>
   );
 }

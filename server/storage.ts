@@ -23,6 +23,8 @@ import {
   type InsertMessage,
   type WhatsAppMessage,
   type InsertWhatsAppMessage,
+  type FusionJob,
+  type InsertFusionJob,
   type DesignWithImages,
   type ClientWithDetails,
   type OrderWithDetails,
@@ -105,6 +107,12 @@ export interface IStorage {
   // WhatsApp messages
   createWhatsAppMessage(message: InsertWhatsAppMessage): Promise<WhatsAppMessage>;
   getWhatsAppMessages(clientId: string): Promise<WhatsAppMessage[]>;
+
+  // Fusion jobs
+  createFusionJob(job: InsertFusionJob): Promise<FusionJob>;
+  getFusionJob(jobId: string): Promise<FusionJob | undefined>;
+  updateFusionJob(jobId: string, data: Partial<FusionJob>): Promise<FusionJob | undefined>;
+  deleteFusionJob(jobId: string): Promise<void>;
 }
 
 // Helper function to convert MongoDB document to our type
@@ -1088,6 +1096,69 @@ export class DatabaseStorage implements IStorage {
       .toArray();
     return messages.map(toWhatsAppMessage);
   }
+
+  // Fusion job methods
+  async createFusionJob(job: InsertFusionJob): Promise<FusionJob> {
+    const db = await this.getDb();
+    const id = generateId();
+    const now = new Date();
+    const newJob = {
+      id,
+      ...job,
+      status: job.status || "pending",
+      progress: job.progress || 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.collection("fusion_jobs").insertOne(newJob);
+    return toFusionJob(newJob);
+  }
+
+  async getFusionJob(jobId: string): Promise<FusionJob | undefined> {
+    const db = await this.getDb();
+    const doc = await db.collection("fusion_jobs").findOne({ jobId });
+    return doc ? toFusionJob(doc) : undefined;
+  }
+
+  async updateFusionJob(jobId: string, data: Partial<FusionJob>): Promise<FusionJob | undefined> {
+    const db = await this.getDb();
+    const updateData = {
+      ...data,
+      updatedAt: new Date(),
+    };
+    const result = await db.collection("fusion_jobs").findOneAndUpdate(
+      { jobId },
+      { $set: updateData },
+      { returnDocument: "after" }
+    );
+    return result ? toFusionJob(result) : undefined;
+  }
+
+  async deleteFusionJob(jobId: string): Promise<void> {
+    const db = await this.getDb();
+    await db.collection("fusion_jobs").deleteOne({ jobId });
+  }
+}
+
+function toFusionJob(doc: any): FusionJob {
+  return {
+    id: doc.id || doc._id?.toString() || "",
+    jobId: doc.jobId,
+    imageA: doc.imageA,
+    imageB: doc.imageB,
+    mode: doc.mode,
+    strength: doc.strength,
+    status: doc.status || "pending",
+    progress: doc.progress || 0,
+    resultUrl: doc.resultUrl,
+    candidates: doc.candidates,
+    explainability: doc.explainability,
+    metadata: doc.metadata,
+    designerId: doc.designerId,
+    error: doc.error,
+    createdAt: doc.createdAt || new Date(),
+    updatedAt: doc.updatedAt || new Date(),
+  };
 }
 
 export const storage = new DatabaseStorage();

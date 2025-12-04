@@ -17,6 +17,7 @@ import { AdminLayout } from "@/components/AdminLayout";
 import { StatusBadge } from "@/components/StatusBadge";
 import { PageLoader } from "@/components/LoadingSpinner";
 import { EmptyState } from "@/components/EmptyState";
+import { AnalyticsDashboard } from "@/components/AnalyticsDashboard";
 import type { OrderWithDetails, Client } from "@shared/schema";
 import { format } from "date-fns";
 
@@ -149,6 +150,17 @@ export default function Dashboard() {
               </CardContent>
             </Link>
           </Card>
+        </div>
+
+        {/* Analytics Dashboard */}
+        <div className="space-y-4">
+          <div>
+            <h2 className="text-xl font-semibold mb-2">Fusion Analytics</h2>
+            <p className="text-sm text-muted-foreground">
+              Real-time metrics for AI-powered fusion system
+            </p>
+          </div>
+          <AnalyticsDashboard />
         </div>
 
         <div className="grid gap-6 lg:grid-cols-2">

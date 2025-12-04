@@ -267,6 +267,66 @@ export const insertWhatsAppMessageSchema = z.object({
   status: z.enum(["pending", "sent", "failed"]).default("pending"),
 });
 
+// Fusion Job types
+export type FusionJobStatus = "pending" | "processing" | "completed" | "failed";
+
+export interface FusionJob {
+  _id?: string;
+  id: string;
+  jobId: string; // UUID for external reference
+  imageA: string; // Cloudinary URL
+  imageB: string; // Cloudinary URL
+  mode: "pattern" | "color" | "texture";
+  strength: number; // 0.5-0.9
+  status: FusionJobStatus;
+  progress: number; // 0-100
+  resultUrl?: string; // Cloudinary URL
+  candidates?: string[]; // Array of Cloudinary URLs
+  explainability?: {
+    heatmap: string; // Base64 encoded
+    designerNote: string;
+    contributionRegions: Array<{
+      region: string;
+      contribution: number; // 0-1
+      pattern: string;
+    }>;
+  };
+  metadata?: {
+    paletteA?: string[]; // Hex colors
+    paletteB?: string[]; // Hex colors
+    dominantPattern?: string;
+    garmentType?: string;
+  };
+  designerId?: string;
+  error?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const insertFusionJobSchema = z.object({
+  jobId: z.string().uuid(),
+  imageA: z.string().url(),
+  imageB: z.string().url(),
+  mode: z.enum(["pattern", "color", "texture"]),
+  strength: z.number().min(0.5).max(0.9),
+  status: z.enum(["pending", "processing", "completed", "failed"]).default("pending"),
+  progress: z.number().min(0).max(100).default(0),
+  resultUrl: z.string().url().optional(),
+  candidates: z.array(z.string().url()).optional(),
+  explainability: z.object({
+    heatmap: z.string().optional(),
+    designerNote: z.string().optional(),
+    contributionRegions: z.array(z.object({
+      region: z.string(),
+      contribution: z.number().min(0).max(1),
+      pattern: z.string(),
+    })).optional(),
+  }).optional(),
+  metadata: z.record(z.unknown()).optional(),
+  designerId: z.string().optional(),
+  error: z.string().optional(),
+});
+
 export const clientLoginSchema = z.object({
   phone: z.string().min(10),
   password: z.string().optional(),
@@ -279,6 +339,7 @@ export const requestOTPSchema = z.object({
 
 export type InsertMessage = z.infer<typeof insertMessageSchema>;
 export type InsertWhatsAppMessage = z.infer<typeof insertWhatsAppMessageSchema>;
+export type InsertFusionJob = z.infer<typeof insertFusionJobSchema>;
 export type ClientLoginData = z.infer<typeof clientLoginSchema>;
 export type RequestOTPData = z.infer<typeof requestOTPSchema>;
 
