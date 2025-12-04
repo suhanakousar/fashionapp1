@@ -146,6 +146,12 @@ export async function extractFabricFeatures(
  */
 async function checkCloudinaryResource(publicId: string): Promise<boolean> {
   try {
+    // Only check if Cloudinary is configured
+    if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+      console.warn("Cloudinary not configured, skipping resource check");
+      return false;
+    }
+    
     const result = await cloudinary.api.resource(publicId, {
       resource_type: "image",
     });
@@ -155,8 +161,9 @@ async function checkCloudinaryResource(publicId: string): Promise<boolean> {
     if (error?.http_code === 404) {
       return false;
     }
-    // For other errors, assume it might exist (don't block)
-    console.warn(`Could not verify Cloudinary resource ${publicId}:`, error.message);
+    // For other errors (network, auth, etc.), assume it might exist (don't block)
+    // This allows the system to continue even if the API check fails
+    console.warn(`Could not verify Cloudinary resource ${publicId}:`, error.message || error);
     return false;
   }
 }
@@ -354,20 +361,31 @@ function generateMockFusion(initImage: string, controlnetImage: string, strength
     !part.includes("v2")
   ).join("/");
 
+  if (!cleanPublicId) {
+    // If we can't extract a clean public_id, return original
+    return initImage;
+  }
+
   // Create a transformed version that looks different
   // This simulates the fusion effect
   const timestamp = Date.now();
-  return cloudinary.url(cleanPublicId, {
-    secure: true,
-    resource_type: "image",
-    transformation: [
-      { width: 1024, height: 1024, crop: "fill", quality: "auto:best" },
-      { effect: `tint:${Math.round(strength * 60)}:FF6FB1` },
-      { effect: "vibrance:40" },
-      { effect: "saturation:25" },
-      { overlay: `text:Arial_50:Fusion+${timestamp % 1000}`, opacity: 0, gravity: "north_east" }, // Hidden watermark for uniqueness
-    ],
-  });
+  try {
+    return cloudinary.url(cleanPublicId, {
+      secure: true,
+      resource_type: "image",
+      transformation: [
+        { width: 1024, height: 1024, crop: "fill", quality: "auto:best" },
+        { effect: `tint:${Math.round(strength * 60)}:FF6FB1` },
+        { effect: "vibrance:40" },
+        { effect: "saturation:25" },
+        { overlay: `text:Arial_50:Fusion+${timestamp % 1000}`, opacity: 0, gravity: "north_east" }, // Hidden watermark for uniqueness
+      ],
+    });
+  } catch (error) {
+    // If Cloudinary URL generation fails, return original
+    console.warn("Cloudinary URL generation failed, using original image:", error);
+    return initImage;
+  }
 }
 
 /**
