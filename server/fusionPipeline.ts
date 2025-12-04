@@ -18,15 +18,16 @@ const USE_MOCK = process.env.NODE_ENV === "mock" || (!process.env.HUGGINGFACE_AP
 
 // Mannequin templates per category (canonical poses)
 // Store as public_ids (without version numbers) to avoid URL transformation issues
+// Default to generic_template for all categories - can be customized per category
 const MANNEQUIN_TEMPLATES: Record<GarmentCategory, string> = {
-  lehenga: "fusion/mannequins/lehenga_template",
-  blouse: "fusion/mannequins/blouse_template",
-  gown: "fusion/mannequins/gown_template",
-  saree: "fusion/mannequins/saree_template",
-  salwar: "fusion/mannequins/salwar_template",
-  dress: "fusion/mannequins/dress_template",
-  top: "fusion/mannequins/top_template",
-  skirt: "fusion/mannequins/skirt_template",
+  lehenga: "fusion/mannequins/generic_template", // Can be customized: "fusion/mannequins/lehenga_template"
+  blouse: "fusion/mannequins/generic_template",
+  gown: "fusion/mannequins/generic_template",
+  saree: "fusion/mannequins/generic_template",
+  salwar: "fusion/mannequins/generic_template",
+  dress: "fusion/mannequins/generic_template",
+  top: "fusion/mannequins/generic_template",
+  skirt: "fusion/mannequins/generic_template",
   other: "fusion/mannequins/generic_template",
 };
 

@@ -95,6 +95,54 @@ export async function validateUpload(file: Express.Multer.File): Promise<{
   return { valid: true };
 }
 
+/**
+ * Upload mannequin template to Cloudinary
+ * Used to set the default mannequin image for fusion
+ */
+export async function uploadMannequinTemplate(
+  file: Express.Multer.File,
+  category?: string
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    try {
+      const publicId = category 
+        ? `fusion/mannequins/${category}_template`
+        : "fusion/mannequins/generic_template";
+
+      // Convert buffer to stream for Cloudinary
+      const bufferStream = new Readable();
+      bufferStream.push(file.buffer);
+      bufferStream.push(null);
+
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          folder: "fusion/mannequins",
+          resource_type: "image",
+          overwrite: true, // Allow overwriting existing templates
+          transformation: [{ quality: "auto:best", width: 1024, height: 1536, crop: "limit" }],
+        },
+        (error, result) => {
+          if (error) {
+            console.error("Cloudinary mannequin upload error:", error);
+            reject(error);
+          } else if (result) {
+            console.log(`Mannequin template uploaded: ${publicId}`);
+            resolve(result.secure_url);
+          } else {
+            reject(new Error("Cloudinary upload failed: No result returned"));
+          }
+        }
+      );
+
+      bufferStream.pipe(uploadStream);
+    } catch (error) {
+      console.error("Error preparing mannequin upload:", error);
+      reject(error);
+    }
+  });
+}
+
 // Upload images to Cloudinary
 export async function uploadImages(files: Express.Multer.File[]): Promise<string[]> {
   const uploadPromises = files.map((file) => {
@@ -192,6 +240,54 @@ export async function createFusionJob(
 }
 
 // Setup fusion routes
+/**
+ * Upload mannequin template to Cloudinary
+ * Used to set the default mannequin image for fusion
+ */
+export async function uploadMannequinTemplate(
+  file: Express.Multer.File,
+  category?: string
+): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
+    try {
+      const publicId = category 
+        ? `fusion/mannequins/${category}_template`
+        : "fusion/mannequins/generic_template";
+
+      // Convert buffer to stream for Cloudinary
+      const bufferStream = new Readable();
+      bufferStream.push(file.buffer);
+      bufferStream.push(null);
+
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          public_id: publicId,
+          folder: "fusion/mannequins",
+          resource_type: "image",
+          overwrite: true, // Allow overwriting existing templates
+          transformation: [{ quality: "auto:best", width: 1024, height: 1536, crop: "limit" }],
+        },
+        (error, result) => {
+          if (error) {
+            console.error("Cloudinary mannequin upload error:", error);
+            reject(error);
+          } else if (result) {
+            console.log(`Mannequin template uploaded: ${publicId}`);
+            resolve(result.secure_url);
+          } else {
+            reject(new Error("Cloudinary upload failed: No result returned"));
+          }
+        }
+      );
+
+      bufferStream.pipe(uploadStream);
+    } catch (error) {
+      console.error("Error preparing mannequin upload:", error);
+      reject(error);
+    }
+  });
+}
+
 export function setupFusionRoutes(app: express.Express) {
   // Upload images
   app.post(
@@ -459,5 +555,44 @@ export function setupFusionRoutes(app: express.Express) {
       res.status(500).json({ error: error.message || "Failed to generate share card" });
     }
   });
+
+  // Upload mannequin template
+  app.post(
+    "/api/fusion/mannequin/upload",
+    (req: Request, res: Response, next: express.NextFunction) => {
+      upload.single("mannequin")(req, res, (err: any) => {
+        if (err) {
+          if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
+          }
+          return res.status(400).json({ error: err.message || "File upload error" });
+        }
+        next();
+      });
+    },
+    async (req: Request, res: Response) => {
+      try {
+        if (!req.file) {
+          return res.status(400).json({ error: "No file uploaded. Use 'mannequin' as the field name." });
+        }
+
+        const { category } = req.body; // Optional: specify category (lehenga, blouse, etc.)
+        
+        const url = await uploadMannequinTemplate(req.file, category);
+        
+        res.json({
+          success: true,
+          url,
+          publicId: category ? `fusion/mannequins/${category}_template` : "fusion/mannequins/generic_template",
+          message: category 
+            ? `Mannequin template uploaded for ${category}` 
+            : "Generic mannequin template uploaded (will be used for all categories)",
+        });
+      } catch (error: any) {
+        console.error("Mannequin upload error:", error);
+        res.status(500).json({ error: error.message || "Failed to upload mannequin template" });
+      }
+    }
+  );
 }
 
