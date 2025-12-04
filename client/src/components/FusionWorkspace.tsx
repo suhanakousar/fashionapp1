@@ -100,15 +100,17 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
       return response;
     },
     onSuccess: (response) => {
-      const data = response.data || response;
-      const jobId = data.jobId || data.id;
+      // Handle both { data: {...} } and direct response formats
+      const data = response?.data || response;
+      const jobId = data?.jobId || data?.id;
       
       if (!jobId) {
-        throw new Error("No job ID returned from server");
+        console.error("Invalid response from server:", response);
+        throw new Error("No job ID returned from server. Please try again.");
       }
       
       setCurrentJob({
-        jobId,
+        jobId: String(jobId),
         status: "pending",
         progress: 0,
       });
@@ -117,7 +119,7 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
         description: "Processing your fusion...",
       });
       // Poll for status
-      pollJobStatus(jobId);
+      pollJobStatus(String(jobId));
     },
     onError: (error: any) => {
       console.error("Fusion creation error:", error);

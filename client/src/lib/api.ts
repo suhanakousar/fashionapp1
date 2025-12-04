@@ -44,7 +44,8 @@ export const api = {
       throw errorObj;
     }
     const json = await res.json();
-    return { data: json, status: res.status };
+    // Return both wrapped and unwrapped for compatibility
+    return json;
   },
   delete: async (url: string) => {
     const apiUrl = getApiUrl(url);
