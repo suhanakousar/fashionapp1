@@ -5,7 +5,25 @@ import multer from "multer";
 import path from "path";
 import { v2 as cloudinary } from "cloudinary";
 import crypto from "crypto";
+import { Readable } from "stream";
 import { storage } from "./storage.js";
+
+// Ensure Cloudinary is configured (it should be configured in routes.ts, but ensure it here too)
+if (!cloudinary.config().cloud_name) {
+  // Cloudinary not configured, try to configure it
+  if (process.env.CLOUDINARY_URL) {
+    cloudinary.config({
+      secure: true,
+    });
+  } else {
+    cloudinary.config({
+      cloud_name: process.env.CLOUDINARY_CLOUD_NAME || "dzxawjlvs",
+      api_key: process.env.CLOUDINARY_API_KEY || "893663778162643",
+      api_secret: process.env.CLOUDINARY_API_SECRET || "_ThzqgrXbg3IHRlqhSJll92P7_w",
+      secure: true,
+    });
+  }
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -47,21 +65,40 @@ export async function validateUpload(file: Express.Multer.File): Promise<{
 export async function uploadImages(files: Express.Multer.File[]): Promise<string[]> {
   const uploadPromises = files.map((file) => {
     return new Promise<string>((resolve, reject) => {
-      const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-      const publicId = `fusion/uploads/${uniqueSuffix}`;
+      try {
+        const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
+        const publicId = `fusion/uploads/${uniqueSuffix}`;
 
-      cloudinary.uploader.upload_stream(
-        {
-          public_id: publicId,
-          folder: "fusion/uploads",
-          resource_type: "image",
-          transformation: [{ quality: "auto:best" }],
-        },
-        (error, result) => {
-          if (error) reject(error);
-          else resolve(result!.secure_url);
-        }
-      ).end(file.buffer);
+        // Convert buffer to stream for Cloudinary
+        const bufferStream = new Readable();
+        bufferStream.push(file.buffer);
+        bufferStream.push(null); // End the stream
+
+        const uploadStream = cloudinary.uploader.upload_stream(
+          {
+            public_id: publicId,
+            folder: "fusion/uploads",
+            resource_type: "image",
+            transformation: [{ quality: "auto:best" }],
+          },
+          (error, result) => {
+            if (error) {
+              console.error("Cloudinary upload error:", error);
+              reject(error);
+            } else if (result) {
+              resolve(result.secure_url);
+            } else {
+              reject(new Error("Cloudinary upload failed: No result returned"));
+            }
+          }
+        );
+
+        // Pipe the buffer stream to Cloudinary
+        bufferStream.pipe(uploadStream);
+      } catch (error) {
+        console.error("Error preparing upload:", error);
+        reject(error);
+      }
     });
   });
 
@@ -130,17 +167,23 @@ export function setupFusionRoutes(app: express.Express) {
         //   });
         // }
 
-        // Upload to Cloudinary
-        const urls = await uploadImages(files);
+      // Upload to Cloudinary
+      console.log(`Uploading ${files.length} files to Cloudinary...`);
+      const urls = await uploadImages(files);
+      console.log("Upload successful, URLs:", urls);
 
-        res.json({
-          success: true,
-          images: urls.map((url) => ({ url })),
-        });
-      } catch (error: any) {
-        console.error("Upload error:", error);
-        res.status(500).json({ error: error.message || "Upload failed" });
-      }
+      res.json({
+        success: true,
+        images: urls.map((url) => ({ url })),
+      });
+    } catch (error: any) {
+      console.error("Upload error:", error);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ 
+        error: error.message || "Upload failed",
+        details: process.env.NODE_ENV === "development" ? error.stack : undefined
+      });
+    }
     }
   );
 
