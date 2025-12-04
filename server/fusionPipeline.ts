@@ -141,20 +141,25 @@ async function callHuggingFace(
  * Upload blob to Cloudinary
  */
 async function uploadToCloudinary(blob: Blob): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const buffer = Buffer.from(await blob.arrayBuffer());
-    const uploadStream = cloudinary.uploader.upload_stream(
-      {
-        folder: "fusion/results",
-        resource_type: "image",
-        transformation: [{ quality: "auto:best" }],
-      },
-      (error, result) => {
-        if (error) reject(error);
-        else resolve(result!.secure_url);
-      }
-    );
-    uploadStream.end(buffer);
+  return new Promise(async (resolve, reject) => {
+    try {
+      const arrayBuffer = await blob.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: "fusion/results",
+          resource_type: "image",
+          transformation: [{ quality: "auto:best" }],
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result!.secure_url);
+        }
+      );
+      uploadStream.end(buffer);
+    } catch (error) {
+      reject(error);
+    }
   });
 }
 

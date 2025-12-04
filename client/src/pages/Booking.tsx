@@ -290,7 +290,7 @@ export default function Booking() {
                     form.handleSubmit(onSubmit)(e);
                   } else {
                     e.preventDefault();
-                    nextStep(e);
+                    nextStep();
                   }
                 }} 
                 className="space-y-6"

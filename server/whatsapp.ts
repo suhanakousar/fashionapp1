@@ -67,6 +67,7 @@ class WhatsAppService {
 
     try {
       // Dynamic import to avoid requiring twilio if not used
+      // @ts-ignore - twilio is optional
       const twilio = await import("twilio");
       const client = twilio.default(this.config.accountSid, this.config.authToken);
 

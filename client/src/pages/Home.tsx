@@ -16,7 +16,6 @@ import { Hero } from "@/components/Hero";
 import { DesignCard } from "@/components/DesignCard";
 import { PageLoader } from "@/components/LoadingSpinner";
 import { EmptyState } from "@/components/EmptyState";
-import { Button } from "@/components/ui/button";
 import { Sparkles } from "lucide-react";
 import type { DesignWithImages, Category } from "@shared/schema";
 

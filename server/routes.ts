@@ -336,7 +336,7 @@ export async function registerRoutes(
           phone: formData.phone,
           email: formData.email || null,
           whatsapp: formData.whatsapp || formData.phone,
-          address: null,
+          address: undefined,
         });
       }
 
@@ -360,9 +360,9 @@ export async function registerRoutes(
         designId: designId,
         designerId: design.designerId,
         status: "requested",
-        preferredDate: formData.preferredDate ? new Date(formData.preferredDate) : null,
+        preferredDate: formData.preferredDate ? new Date(formData.preferredDate) : undefined,
         notes: formData.notes || null,
-        measurementId: measurement?.id || null,
+        measurementId: measurement?.id || undefined,
       });
 
       const files = req.files as Express.Multer.File[];
@@ -391,6 +391,7 @@ export async function registerRoutes(
         type: "new_order",
         title: "New Booking",
         message: `${client.name} booked "${design.title}"`,
+        read: false,
         metadata: { orderId: order.id, clientId: client.id },
       });
 
@@ -888,11 +889,11 @@ export async function registerRoutes(
       // Company name in header
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(28);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("RAJIYA FASHION", pageWidth / 2, 25, { align: "center" });
       
       doc.setFontSize(12);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text("Premium Fashion Design Studio", pageWidth / 2, 35, { align: "center" });
 
       // Reset text color
@@ -903,10 +904,10 @@ export async function registerRoutes(
       doc.setFillColor(249, 250, 251); // Gray-50
       doc.roundedRect(20, y, pageWidth / 2 - 30, 40, 3, 3, "F");
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("From:", 25, y + 8);
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text("Rajiya Fashion", 25, y + 16);
       doc.text("D.No. 7/394, Rayachur Street", 25, y + 23);
       doc.text("Main Bazar, Tadipatri-515411", 25, y + 30);
@@ -916,10 +917,10 @@ export async function registerRoutes(
       doc.setFillColor(249, 250, 251);
       doc.roundedRect(pageWidth / 2 + 10, y, pageWidth / 2 - 30, 40, 3, 3, "F");
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Invoice Details", pageWidth / 2 + 15, y + 8);
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text(`Invoice #: ${order.id.slice(0, 8).toUpperCase()}`, pageWidth / 2 + 15, y + 16);
       doc.text(`Date: ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, pageWidth / 2 + 15, y + 23);
       doc.text(`Status: ${order.status.replace(/_/g, " ").toUpperCase()}`, pageWidth / 2 + 15, y + 30);
@@ -930,10 +931,10 @@ export async function registerRoutes(
       doc.setFillColor(249, 250, 251);
       doc.roundedRect(20, y, pageWidth - 40, 35, 3, 3, "F");
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Bill To:", 25, y + 8);
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text(order.client?.name || "", 25, y + 17);
       doc.text(order.client?.phone || "", 25, y + 25);
       if (order.client?.email) {
@@ -946,7 +947,7 @@ export async function registerRoutes(
       doc.roundedRect(20, y, pageWidth - 40, 12, 2, 2, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Description", 25, y + 8);
       doc.text("Amount", pageWidth - 70, y + 8, { align: "right" });
       doc.text("Status", pageWidth - 25, y + 8, { align: "right" });
@@ -967,7 +968,7 @@ export async function registerRoutes(
         rowColor = !rowColor;
 
         doc.setFontSize(10);
-        doc.setFont(undefined, "normal");
+        doc.setFont("helvetica", "normal");
         doc.text(entry.description, 25, y);
         doc.text(`₹${parseFloat(entry.amount).toFixed(2)}`, pageWidth - 70, y, { align: "right" });
         
@@ -975,7 +976,7 @@ export async function registerRoutes(
         const statusText = entry.paid ? "Paid" : "Pending";
         const statusColor = entry.paid ? [34, 197, 94] : [251, 191, 36]; // Green or Amber
         doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
-        doc.setFont(undefined, "bold");
+        doc.setFont("helvetica", "bold");
         doc.text(statusText, pageWidth - 25, y, { align: "right" });
         doc.setTextColor(0, 0, 0);
         
@@ -994,17 +995,17 @@ export async function registerRoutes(
       doc.line(pageWidth - 85, y + 30, pageWidth - 25, y + 30);
 
       doc.setFontSize(10);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Summary", pageWidth - 85, y + 10);
       
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text("Total:", pageWidth - 85, y + 23);
       doc.text(`₹${total.toFixed(2)}`, pageWidth - 25, y + 23, { align: "right" });
       
       doc.text("Paid:", pageWidth - 85, y + 38);
       doc.text(`₹${paid.toFixed(2)}`, pageWidth - 25, y + 38, { align: "right" });
       
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(220, 38, 38); // Red for balance
       doc.text("Balance Due:", pageWidth - 85, y + 48);
@@ -1017,7 +1018,7 @@ export async function registerRoutes(
       doc.line(20, y, pageWidth - 20, y);
       y += 10;
       doc.setFontSize(9);
-      doc.setFont(undefined, "italic");
+      doc.setFont("helvetica", "italic");
       doc.setTextColor(100, 100, 100);
       doc.text("Thank you for your business! We appreciate your trust in Rajiya Fashion.", pageWidth / 2, y, { align: "center" });
       doc.text("For any queries, please contact us at +91 9182720386", pageWidth / 2, y + 6, { align: "center" });
@@ -1055,11 +1056,11 @@ export async function registerRoutes(
       
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(28);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("BILLING STATEMENT", pageWidth / 2, 25, { align: "center" });
       
       doc.setFontSize(12);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text("Complete Transaction History", pageWidth / 2, 35, { align: "center" });
 
       doc.setTextColor(0, 0, 0);
@@ -1069,10 +1070,10 @@ export async function registerRoutes(
       doc.setFillColor(249, 250, 251);
       doc.roundedRect(20, y, pageWidth / 2 - 30, 40, 3, 3, "F");
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("From:", 25, y + 8);
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text("Rajiya Fashion", 25, y + 16);
       doc.text("D.No. 7/394, Rayachur Street", 25, y + 23);
       doc.text("Main Bazar, Tadipatri-515411", 25, y + 30);
@@ -1082,10 +1083,10 @@ export async function registerRoutes(
       doc.setFillColor(249, 250, 251);
       doc.roundedRect(pageWidth / 2 + 10, y, pageWidth / 2 - 30, 40, 3, 3, "F");
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Statement Details", pageWidth / 2 + 15, y + 8);
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text(`Statement Date: ${new Date().toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, pageWidth / 2 + 15, y + 16);
       doc.text(`Client ID: ${client.id.slice(0, 8).toUpperCase()}`, pageWidth / 2 + 15, y + 23);
       doc.text(`Entries: ${billingEntries.length}`, pageWidth / 2 + 15, y + 30);
@@ -1095,10 +1096,10 @@ export async function registerRoutes(
       doc.setFillColor(249, 250, 251);
       doc.roundedRect(20, y, pageWidth - 40, 35, 3, 3, "F");
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Bill To:", 25, y + 8);
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text(client.name || "", 25, y + 17);
       doc.text(client.phone || "", 25, y + 25);
       if (client.email) {
@@ -1111,7 +1112,7 @@ export async function registerRoutes(
       doc.roundedRect(20, y, pageWidth - 40, 12, 2, 2, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Date", 25, y + 8);
       doc.text("Description", 60, y + 8);
       doc.text("Amount", pageWidth - 50, y + 8, { align: "right" });
@@ -1119,7 +1120,7 @@ export async function registerRoutes(
       doc.setTextColor(0, 0, 0);
       y += 15;
 
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       let total = 0;
       let paid = 0;
 
@@ -1148,7 +1149,7 @@ export async function registerRoutes(
           doc.roundedRect(20, y, pageWidth - 40, 12, 2, 2, "F");
           doc.setTextColor(255, 255, 255);
           doc.setFontSize(11);
-          doc.setFont(undefined, "bold");
+          doc.setFont("helvetica", "bold");
           doc.text("Date", 25, y + 8);
           doc.text("Description", 60, y + 8);
           doc.text("Amount", pageWidth - 50, y + 8, { align: "right" });
@@ -1167,7 +1168,7 @@ export async function registerRoutes(
 
         const entryDate = new Date(entry.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
         doc.setFontSize(10);
-        doc.setFont(undefined, "normal");
+        doc.setFont("helvetica", "normal");
         doc.text(entryDate, 25, y);
         
         let description = entry.description;
@@ -1188,7 +1189,7 @@ export async function registerRoutes(
         const statusText = entry.paid ? "Paid" : "Pending";
         const statusColor = entry.paid ? [34, 197, 94] : [251, 191, 36];
         doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
-        doc.setFont(undefined, "bold");
+        doc.setFont("helvetica", "bold");
         doc.text(statusText, pageWidth - 25, y, { align: "right" });
         doc.setTextColor(0, 0, 0);
         
@@ -1214,18 +1215,18 @@ export async function registerRoutes(
       doc.line(pageWidth - 85, y + 45, pageWidth - 25, y + 45);
 
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Summary", pageWidth - 85, y + 10);
       
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text("Total Amount:", pageWidth - 85, y + 23);
       doc.text(`₹${total.toFixed(2)}`, pageWidth - 25, y + 23, { align: "right" });
       
       doc.text("Total Paid:", pageWidth - 85, y + 38);
       doc.text(`₹${paid.toFixed(2)}`, pageWidth - 25, y + 38, { align: "right" });
       
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.setFontSize(11);
       doc.setTextColor(220, 38, 38);
       doc.text("Outstanding:", pageWidth - 85, y + 53);
@@ -1238,7 +1239,7 @@ export async function registerRoutes(
       doc.line(20, y, pageWidth - 20, y);
       y += 10;
       doc.setFontSize(9);
-      doc.setFont(undefined, "italic");
+      doc.setFont("helvetica", "italic");
       doc.setTextColor(100, 100, 100);
       doc.text("Thank you for your business! We appreciate your trust in Rajiya Fashion.", pageWidth / 2, y, { align: "center" });
       doc.text("For any queries, please contact us at +91 9182720386", pageWidth / 2, y + 6, { align: "center" });
@@ -1257,7 +1258,8 @@ export async function registerRoutes(
   app.get("/api/admin/billing/:id/invoice", requireAuth, async (req, res) => {
     try {
       // Get billing entry from database
-      const db = await storage.getDb();
+      const { getDb } = await import("./db.js");
+      const db = await getDb();
       const billingEntryDoc = await db.collection("billing_entries").findOne({ id: req.params.id });
       if (!billingEntryDoc) {
         return res.status(404).json({ message: "Billing entry not found" });
@@ -1287,11 +1289,11 @@ export async function registerRoutes(
       
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(28);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("INVOICE", pageWidth / 2, 25, { align: "center" });
       
       doc.setFontSize(12);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text("Premium Fashion Design Studio", pageWidth / 2, 35, { align: "center" });
 
       doc.setTextColor(0, 0, 0);
@@ -1301,10 +1303,10 @@ export async function registerRoutes(
       doc.setFillColor(249, 250, 251);
       doc.roundedRect(20, y, pageWidth / 2 - 30, 40, 3, 3, "F");
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("From:", 25, y + 8);
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text("Rajiya Fashion", 25, y + 16);
       doc.text("D.No. 7/394, Rayachur Street", 25, y + 23);
       doc.text("Main Bazar, Tadipatri-515411", 25, y + 30);
@@ -1314,19 +1316,19 @@ export async function registerRoutes(
       doc.setFillColor(249, 250, 251);
       doc.roundedRect(pageWidth / 2 + 10, y, pageWidth / 2 - 30, 40, 3, 3, "F");
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Invoice Details", pageWidth / 2 + 15, y + 8);
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text(`Invoice #: ${billingEntry.id.slice(0, 8).toUpperCase()}`, pageWidth / 2 + 15, y + 16);
       doc.text(`Date: ${new Date(billingEntry.createdAt).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" })}`, pageWidth / 2 + 15, y + 23);
       const statusColor = billingEntry.paid ? [34, 197, 94] : [251, 191, 36];
       doc.setTextColor(statusColor[0], statusColor[1], statusColor[2]);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text(`Status: ${billingEntry.paid ? "PAID" : "PENDING"}`, pageWidth / 2 + 15, y + 30);
       doc.setTextColor(0, 0, 0);
       if (order) {
-        doc.setFont(undefined, "normal");
+        doc.setFont("helvetica", "normal");
         doc.text(`Order: ${order.id.slice(0, 8).toUpperCase()}`, pageWidth / 2 + 15, y + 37);
       }
 
@@ -1335,10 +1337,10 @@ export async function registerRoutes(
       doc.setFillColor(249, 250, 251);
       doc.roundedRect(20, y, pageWidth - 40, 35, 3, 3, "F");
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Bill To:", 25, y + 8);
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text(client?.name || "", 25, y + 17);
       doc.text(client?.phone || "", 25, y + 25);
       if (client?.email) {
@@ -1351,7 +1353,7 @@ export async function registerRoutes(
       doc.roundedRect(20, y, pageWidth - 40, 12, 2, 2, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Description", 25, y + 8);
       doc.text("Amount", pageWidth - 70, y + 8, { align: "right" });
       doc.text("Status", pageWidth - 25, y + 8, { align: "right" });
@@ -1363,12 +1365,12 @@ export async function registerRoutes(
       doc.rect(20, y - 5, pageWidth - 40, 25, "F");
       
       doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text(billingEntry.description, 25, y);
       
       if (order) {
         doc.setFontSize(9);
-        doc.setFont(undefined, "italic");
+        doc.setFont("helvetica", "italic");
         doc.setTextColor(100, 100, 100);
         doc.text(`Related Order: ${order.design?.title || "N/A"}`, 25, y + 8);
         doc.text(`Order ID: ${order.id.slice(0, 8).toUpperCase()}`, 25, y + 15);
@@ -1376,7 +1378,7 @@ export async function registerRoutes(
       }
       
       doc.setFontSize(11);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text(`₹${parseFloat(billingEntry.amount).toFixed(2)}`, pageWidth - 70, y, { align: "right" });
       
       const statusText = billingEntry.paid ? "Paid" : "Pending";
@@ -1395,14 +1397,14 @@ export async function registerRoutes(
       doc.line(pageWidth - 85, y + 15, pageWidth - 25, y + 15);
 
       doc.setFontSize(10);
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Summary", pageWidth - 85, y + 10);
       
-      doc.setFont(undefined, "normal");
+      doc.setFont("helvetica", "normal");
       doc.text("Total Amount:", pageWidth - 85, y + 23);
       doc.text(`₹${parseFloat(billingEntry.amount).toFixed(2)}`, pageWidth - 25, y + 23, { align: "right" });
       
-      doc.setFont(undefined, "bold");
+      doc.setFont("helvetica", "bold");
       doc.text("Payment Status:", pageWidth - 85, y + 38);
       doc.setTextColor(statusTextColor[0], statusTextColor[1], statusTextColor[2]);
       doc.text(billingEntry.paid ? "PAID" : "PENDING", pageWidth - 25, y + 38, { align: "right" });
@@ -1414,7 +1416,7 @@ export async function registerRoutes(
       doc.line(20, y, pageWidth - 20, y);
       y += 10;
       doc.setFontSize(9);
-      doc.setFont(undefined, "italic");
+      doc.setFont("helvetica", "italic");
       doc.setTextColor(100, 100, 100);
       doc.text("Thank you for your business! We appreciate your trust in Rajiya Fashion.", pageWidth / 2, y, { align: "center" });
       doc.text("For any queries, please contact us at +91 9182720386", pageWidth / 2, y + 6, { align: "center" });
@@ -1497,6 +1499,7 @@ export async function registerRoutes(
             type: "order_status_changed",
             title: "Order Updated",
             message: `Order for "${fullOrder.design?.title}" is now ${req.body.status.replace(/_/g, " ")}`,
+            read: false,
             metadata: { orderId: req.params.id },
           });
 
@@ -2061,9 +2064,10 @@ This link expires in 15 minutes.`;
       const newMessage = await storage.createMessage({
         clientId: req.session.clientId!,
         designerId,
-        orderId: orderId || null,
+        orderId: orderId || undefined,
         sender: "client",
         message,
+        read: false,
       });
 
       res.json({ message: newMessage });

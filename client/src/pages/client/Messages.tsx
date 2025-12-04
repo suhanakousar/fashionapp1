@@ -21,7 +21,7 @@ import { PageLoader } from "@/components/LoadingSpinner";
 import { EmptyState } from "@/components/EmptyState";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import type { Message } from "@shared/schema";
+import type { Message, Client } from "@shared/schema";
 import { format } from "date-fns";
 
 const messageSchema = z.object({
@@ -35,7 +35,7 @@ export default function ClientMessages() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
 
-  const { data: client } = useQuery({
+  const { data: client } = useQuery<Client | null>({
     queryKey: ["/api/client/me"],
   });
 
@@ -139,7 +139,7 @@ export default function ClientMessages() {
                           <Avatar className="h-8 w-8 shrink-0">
                             <AvatarFallback className={isClient ? "bg-primary" : "bg-muted"}>
                               {isClient
-                                ? client?.name?.[0]?.toUpperCase() || "C"
+                                ? (client && typeof client === 'object' && 'name' in client ? client.name : "C")[0]?.toUpperCase() || "C"
                                 : "D"}
                             </AvatarFallback>
                           </Avatar>
