@@ -98,9 +98,30 @@ async function callHuggingFace(
   strength: number
 ): Promise<string> {
   if (USE_MOCK) {
-    // Return mock result for development
-    console.log("Using mock HuggingFace response");
-    return imageUrl; // Return original for now
+    // Return mock result for development - use Cloudinary transformations to create visual difference
+    console.log("Using mock HuggingFace response - creating transformed image");
+    try {
+      // Create a transformed version using Cloudinary to simulate fusion
+      const transformedUrl = cloudinary.url(imageUrl, {
+        transformation: [
+          {
+            effect: "art:audrey", // Artistic effect to simulate fusion
+            quality: "auto:best",
+          },
+          {
+            overlay: "text:Arial_50_bold:FUSION",
+            gravity: "center",
+            color: "#FF6FB1",
+            opacity: 30,
+          },
+        ],
+      });
+      return transformedUrl;
+    } catch (error) {
+      console.error("Mock transformation error:", error);
+      // Fallback: add a query param to make it look different
+      return `${imageUrl}?t=${Date.now()}&fusion=mock`;
+    }
   }
 
   try {

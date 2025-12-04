@@ -151,20 +151,33 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
           clearInterval(interval);
           if (job.status === "completed") {
             // Fetch full results
-            const resultsResponse = await api.get(`/api/fusion/results/${jobId}`);
-            const results = resultsResponse.data;
-            setCurrentJob({
-              jobId: results.jobId || jobId,
-              status: results.status,
-              progress: results.progress,
-              resultUrl: results.resultUrl,
-              candidates: results.candidates,
-              explainability: results.explainability,
-            });
-            toast({
-              title: "Fusion completed!",
-              description: "Your design is ready",
-            });
+            try {
+              const resultsResponse = await api.get(`/api/fusion/results/${jobId}`);
+              const results = resultsResponse.data || resultsResponse;
+              setCurrentJob({
+                jobId: results.jobId || jobId,
+                status: results.status || "completed",
+                progress: results.progress || 100,
+                resultUrl: results.resultUrl || job.resultUrl,
+                candidates: results.candidates || job.candidates || [],
+                explainability: results.explainability || job.explainability,
+              });
+              toast({
+                title: "Fusion completed!",
+                description: "Your design is ready",
+              });
+            } catch (error) {
+              console.error("Error fetching results:", error);
+              // Use status data if results fetch fails
+              setCurrentJob({
+                jobId: job.jobId || jobId,
+                status: job.status,
+                progress: job.progress,
+                resultUrl: job.resultUrl,
+                candidates: job.candidates || [],
+                explainability: job.explainability,
+              });
+            }
           } else if (job.status === "failed") {
             toast({
               title: "Fusion failed",
