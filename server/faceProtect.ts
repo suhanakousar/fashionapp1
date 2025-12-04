@@ -191,6 +191,84 @@ export async function checkFaceProtection(
 }
 
 /**
+ * Detect faces and create mask (for fusion pipeline)
+ * REVIEW REQUIRED: Face protection logic must be verified for legal/privacy compliance.
+ */
+export async function detectFacesAndMask(
+  imageUrl: string
+): Promise<{
+  faces: Array<{ x: number; y: number; width: number; height: number }>;
+  faceMaskBase64?: string;
+  faceDetected: boolean;
+}> {
+  const detection = await detectFaces(imageUrl);
+  
+  if (!detection.hasFaces || detection.faces.length === 0) {
+    return {
+      faces: [],
+      faceDetected: false,
+    };
+  }
+  
+  // Create face mask as base64 PNG
+  // In production, you'd use sharp or canvas to create a proper mask image
+  try {
+    // Fetch image to get dimensions
+    const response = await fetch(imageUrl);
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+    
+    // Use sharp to create mask
+    const sharp = (await import("sharp")).default;
+    const metadata = await sharp(buffer).metadata();
+    const width = metadata.width || 1024;
+    const height = metadata.height || 1536;
+    
+    // Create black mask with white regions for faces
+    const maskImage = await sharp({
+      create: {
+        width,
+        height,
+        channels: 1, // Grayscale
+        background: { r: 0, g: 0, b: 0 }, // Black background
+      },
+    })
+      .composite(
+        detection.faces.map((face) => ({
+          input: {
+            create: {
+              width: face.width,
+              height: face.height,
+              channels: 1,
+              background: { r: 255, g: 255, b: 255 }, // White for face region
+            },
+          },
+          left: face.x,
+          top: face.y,
+          blend: "over",
+        }))
+      )
+      .png()
+      .toBuffer();
+    
+    const faceMaskBase64 = `data:image/png;base64,${maskImage.toString("base64")}`;
+    
+    return {
+      faces: detection.faces,
+      faceMaskBase64,
+      faceDetected: true,
+    };
+  } catch (error) {
+    console.error("Face mask creation error:", error);
+    // Return faces without mask if mask creation fails
+    return {
+      faces: detection.faces,
+      faceDetected: true,
+    };
+  }
+}
+
+/**
  * Extract Cloudinary public ID from URL
  */
 function extractPublicId(url: string): string | null {

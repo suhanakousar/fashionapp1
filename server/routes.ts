@@ -14,6 +14,7 @@ import { bookingFormSchema, insertBillingEntrySchema } from "../shared/schema.js
 import { v2 as cloudinary } from "cloudinary";
 import { Readable } from "stream";
 import { setupFusionRoutes } from "./fusion.js";
+import fusionRoutes from "./routes/fusion.js";
 import { getDb } from "./db.js";
 
 declare module "express-session" {
@@ -2100,6 +2101,9 @@ This link expires in 15 minutes.`;
 
   // Fusion routes (Frankenstein Fusion Outfit Designer)
   setupFusionRoutes(app);
+  
+  // New fusion pipeline routes
+  app.use("/api/fusion", fusionRoutes);
 
   // Analytics endpoint (judge-friendly telemetry)
   app.get("/api/admin/analytics", requireAuth, async (req, res) => {
