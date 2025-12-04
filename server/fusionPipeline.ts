@@ -142,11 +142,39 @@ export async function extractFabricFeatures(
 }
 
 /**
- * Get mannequin template for category
- * Returns Cloudinary URL from public_id
+ * Check if a Cloudinary resource exists
  */
-function getMannequinTemplate(category: GarmentCategory): string {
+async function checkCloudinaryResource(publicId: string): Promise<boolean> {
+  try {
+    const result = await cloudinary.api.resource(publicId, {
+      resource_type: "image",
+    });
+    return !!result;
+  } catch (error: any) {
+    // Resource doesn't exist or API error
+    if (error?.http_code === 404) {
+      return false;
+    }
+    // For other errors, assume it might exist (don't block)
+    console.warn(`Could not verify Cloudinary resource ${publicId}:`, error.message);
+    return false;
+  }
+}
+
+/**
+ * Get mannequin template for category
+ * Returns Cloudinary URL from public_id, or null if resource doesn't exist
+ */
+async function getMannequinTemplate(category: GarmentCategory): Promise<string | null> {
   const publicId = MANNEQUIN_TEMPLATES[category] || MANNEQUIN_TEMPLATES.other;
+  
+  // Check if resource exists
+  const exists = await checkCloudinaryResource(publicId);
+  if (!exists) {
+    console.warn(`Mannequin template ${publicId} not found in Cloudinary`);
+    return null;
+  }
+  
   // Generate clean URL from public_id (no transformations)
   return cloudinary.url(publicId, {
     secure: true,
@@ -596,10 +624,19 @@ export async function processFusionJob(jobId: string): Promise<void> {
     // Use reference model if provided, otherwise use category template, or fallback to first fabric image
     let mannequinTemplate = job.referenceModel;
     if (!mannequinTemplate) {
-      mannequinTemplate = getMannequinTemplate(job.category);
-      // If template URL doesn't exist, use first fabric image as base
-      if (!mannequinTemplate || mannequinTemplate.includes("template") && !mannequinTemplate.includes("cloudinary")) {
-        mannequinTemplate = job.fabricTop || job.fabricBottom || job.imageA || job.imageB || mannequinTemplate;
+      const templateUrl = await getMannequinTemplate(job.category);
+      if (templateUrl) {
+        mannequinTemplate = templateUrl;
+      } else {
+        // Template doesn't exist, use first fabric image as base
+        mannequinTemplate = job.fabricTop || job.fabricBottom || job.imageA || job.imageB;
+        if (!mannequinTemplate) {
+          throw new Error(
+            `No mannequin template found for category "${job.category}" and no fabric images provided. ` +
+            `Please upload at least one fabric image or provide a reference model.`
+          );
+        }
+        console.log(`Using fabric image as mannequin template: ${mannequinTemplate}`);
       }
     }
     await storage.updateFusionJob(jobId, { progress: 15 });
