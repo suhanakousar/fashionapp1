@@ -39,9 +39,12 @@ export const api = {
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: res.statusText }));
-      throw new Error(error.message || error.error || res.statusText);
+      const errorObj = new Error(error.message || error.error || res.statusText);
+      (errorObj as any).response = { data: error, status: res.status };
+      throw errorObj;
     }
-    return res.json();
+    const json = await res.json();
+    return { data: json, status: res.status };
   },
   delete: async (url: string) => {
     const apiUrl = getApiUrl(url);

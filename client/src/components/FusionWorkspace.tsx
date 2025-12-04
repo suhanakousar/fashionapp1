@@ -97,11 +97,18 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
         mode: fusionMode,
         strength: strength[0],
       });
-      return response.data;
+      return response;
     },
-    onSuccess: (data) => {
+    onSuccess: (response) => {
+      const data = response.data || response;
+      const jobId = data.jobId || data.id;
+      
+      if (!jobId) {
+        throw new Error("No job ID returned from server");
+      }
+      
       setCurrentJob({
-        jobId: data.jobId,
+        jobId,
         status: "pending",
         progress: 0,
       });
@@ -110,12 +117,14 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
         description: "Processing your fusion...",
       });
       // Poll for status
-      pollJobStatus(data.jobId);
+      pollJobStatus(jobId);
     },
     onError: (error: any) => {
+      console.error("Fusion creation error:", error);
+      const errorMessage = error?.response?.data?.error || error?.message || "Please try again";
       toast({
         title: "Failed to create fusion",
-        description: error.message || "Please try again",
+        description: errorMessage,
         variant: "destructive",
       });
     },

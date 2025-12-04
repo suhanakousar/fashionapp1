@@ -79,7 +79,7 @@ export async function createFusionJob(
   const jobId = crypto.randomUUID();
   
   // Store job in database
-  await storage.createFusionJob({
+  const newJob = await storage.createFusionJob({
     jobId,
     imageA,
     imageB,
