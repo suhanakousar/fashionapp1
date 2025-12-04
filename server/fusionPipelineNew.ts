@@ -383,7 +383,13 @@ export async function processReplaceOutfitJob(jobIdStr: string) {
         const bottomBuf = Buffer.from(await bottomBufResp.arrayBuffer());
 
         // blendSeamsAndHarmonize will take base image (topBuf) and overlay bottomBuf using bottom mask/paste and seam blur
-        const compositeBuf = await blendSeamsAndHarmonize(topBuf, bottomBuf, samModelMasks.bottomMaskBase64);
+        // Only pass mask if it's valid (not empty or undefined)
+        const bottomMask = samModelMasks.bottomMaskBase64 && 
+                          samModelMasks.bottomMaskBase64.trim() && 
+                          samModelMasks.bottomMaskBase64 !== "data:image/png;base64,"
+                          ? samModelMasks.bottomMaskBase64
+                          : undefined;
+        const compositeBuf = await blendSeamsAndHarmonize(topBuf, bottomBuf, bottomMask);
         const finalUpload = await uploadBufferToCloudinary(compositeBuf, `fusion/${jobIdStr}/candidates/final-${Date.now()}`);
         candidates.push({ url: finalUpload.secure_url, meta: { mode: "top-then-bottom-hybrid" } });
         await updateStatus("processing", 82, { status: "bottom_done" });

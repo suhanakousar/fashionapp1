@@ -19,10 +19,29 @@ export async function extractPaletteAndPatches(
   region: "top" | "bottom"
 ): Promise<PaletteAndPatches> {
   try {
-    // Fetch image
-    const response = await fetch(fabricImageUrl);
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
+    // Handle both URLs and base64 data URLs
+    let buffer: Buffer;
+    
+    if (fabricImageUrl.startsWith("data:image")) {
+      // It's a base64 data URL
+      const base64Data = fabricImageUrl.includes(",") 
+        ? fabricImageUrl.split(",")[1] 
+        : fabricImageUrl.replace(/^data:image\/\w+;base64,/, "");
+      
+      if (!base64Data || base64Data.trim().length === 0) {
+        throw new Error("Empty base64 data in fabric image URL");
+      }
+      
+      buffer = Buffer.from(base64Data, "base64");
+    } else {
+      // It's a regular URL - fetch it
+      const response = await fetch(fabricImageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch fabric image: ${response.status} ${response.statusText}`);
+      }
+      const arrayBuffer = await response.arrayBuffer();
+      buffer = Buffer.from(arrayBuffer);
+    }
     
     // Extract palette using node-vibrant
     const vibrant = Vibrant.from(buffer);
