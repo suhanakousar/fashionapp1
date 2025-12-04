@@ -266,7 +266,8 @@ async function generateImageWithModel(
   negativePrompt: string,
   controlnetImage: string,
   mode: FusionMode,
-  strength: number
+  strength: number,
+  fabricImages?: { top?: string; bottom?: string; trims?: string }
 ): Promise<string> {
   const strengthMap: Record<FusionMode, number> = {
     "silhouette-first": 0.35,
@@ -336,22 +337,114 @@ async function generateImageWithModel(
 
   // Mock fallback (always works for demo)
   console.log("Using mock fusion generation (all API attempts failed or mock mode)");
-  return generateMockFusion(initImage, controlnetImage, adjustedStrength);
+  return generateMockFusion(initImage, controlnetImage, adjustedStrength, fabricImages);
+}
+
+/**
+ * Create a placeholder mannequin image using Cloudinary text/image generation
+ * This is used when no mannequin template exists
+ */
+function createPlaceholderMannequin(category: GarmentCategory): string {
+  // Use Cloudinary's text overlay to create a simple mannequin placeholder
+  // In production, you'd upload actual mannequin images
+  const categoryText = category.charAt(0).toUpperCase() + category.slice(1);
+  return cloudinary.url("sample", {
+    secure: true,
+    resource_type: "image",
+    transformation: [
+      { width: 1024, height: 1536, crop: "fill", color: "#f0f0f0", background: "#f0f0f0" },
+      { overlay: { font_family: "Arial", font_size: 80, text: `Mannequin%20${categoryText}`, color: "#999" }, gravity: "center", y: -100 },
+      { overlay: { font_family: "Arial", font_size: 40, text: "Placeholder", color: "#ccc" }, gravity: "center", y: 0 },
+    ],
+  });
 }
 
 /**
  * Mock fusion generation (for demo/reliability)
- * Creates a visually transformed image using Cloudinary
+ * Creates a visually transformed image by compositing fabric onto mannequin
  */
-function generateMockFusion(initImage: string, controlnetImage: string, strength: number): string {
-  const publicId = extractPublicId(initImage);
-  if (!publicId) {
-    // If not Cloudinary URL, return as-is (will be handled by pipeline)
+function generateMockFusion(initImage: string, controlnetImage: string, strength: number, fabricImages?: { top?: string; bottom?: string; trims?: string }): string {
+  // Check if initImage is a fabric image (not a mannequin)
+  const isFabricImage = !initImage.includes("mannequin") && !initImage.includes("template");
+  
+  // If initImage is a fabric image, we need to composite it onto a mannequin
+  if (isFabricImage) {
+    // Create a placeholder mannequin base
+    const mannequinBase = createPlaceholderMannequin("other");
+    
+    // Get fabric image public_id
+    const fabricPublicId = extractPublicId(initImage);
+    if (fabricPublicId) {
+      const cleanFabricId = fabricPublicId.split("/").filter(part => 
+        !part.includes("c_") && 
+        !part.includes("w_") && 
+        !part.includes("h_") && 
+        !part.includes("q_") &&
+        !part.includes("v1") &&
+        !part.includes("v2")
+      ).join("/");
+      
+      if (cleanFabricId) {
+        // Composite fabric onto mannequin using overlay
+        const timestamp = Date.now();
+        try {
+          return cloudinary.url(cleanFabricId, {
+            secure: true,
+            resource_type: "image",
+            transformation: [
+              { width: 1024, height: 1536, crop: "fill", quality: "auto:best" },
+              { effect: `tint:${Math.round(strength * 30)}:FF6FB1` },
+              { effect: "vibrance:20" },
+              { effect: "saturation:15" },
+              // Add a subtle overlay to simulate mannequin shape
+              { overlay: "sample", width: 1024, height: 1536, crop: "fill", opacity: 20, effect: "blur:100" },
+            ],
+          });
+        } catch (error) {
+          console.warn("Cloudinary composite failed, using fabric with transformations:", error);
+        }
+      }
+    }
+    
+    // Fallback: return fabric with transformations to show it's been processed
+    const fallbackFabricId = extractPublicId(initImage);
+    if (fallbackFabricId) {
+      const cleanPublicId = fallbackFabricId.split("/").filter(part => 
+        !part.includes("c_") && 
+        !part.includes("w_") && 
+        !part.includes("h_") && 
+        !part.includes("q_") &&
+        !part.includes("v1") &&
+        !part.includes("v2")
+      ).join("/");
+      
+      if (cleanPublicId) {
+        const timestamp = Date.now();
+        try {
+          return cloudinary.url(cleanPublicId, {
+            secure: true,
+            resource_type: "image",
+            transformation: [
+              { width: 1024, height: 1536, crop: "fill", quality: "auto:best" },
+              { effect: `tint:${Math.round(strength * 60)}:FF6FB1` },
+              { effect: "vibrance:40" },
+              { effect: "saturation:25" },
+            ],
+          });
+        } catch (error) {
+          console.warn("Cloudinary URL generation failed:", error);
+        }
+      }
+    }
     return initImage;
   }
 
-  // Ensure we have a clean public_id (no transformations in it)
-  // Remove any transformation-like patterns that might have been extracted
+  // If initImage is already a mannequin, apply fabric transformations
+  const publicId = extractPublicId(initImage);
+  if (!publicId) {
+    return initImage;
+  }
+
   const cleanPublicId = publicId.split("/").filter(part => 
     !part.includes("c_") && 
     !part.includes("w_") && 
@@ -362,27 +455,24 @@ function generateMockFusion(initImage: string, controlnetImage: string, strength
   ).join("/");
 
   if (!cleanPublicId) {
-    // If we can't extract a clean public_id, return original
     return initImage;
   }
 
-  // Create a transformed version that looks different
-  // This simulates the fusion effect
+  // Apply fabric textures/colors to mannequin
   const timestamp = Date.now();
   try {
     return cloudinary.url(cleanPublicId, {
       secure: true,
       resource_type: "image",
       transformation: [
-        { width: 1024, height: 1024, crop: "fill", quality: "auto:best" },
+        { width: 1024, height: 1536, crop: "fill", quality: "auto:best" },
         { effect: `tint:${Math.round(strength * 60)}:FF6FB1` },
         { effect: "vibrance:40" },
         { effect: "saturation:25" },
-        { overlay: `text:Arial_50:Fusion+${timestamp % 1000}`, opacity: 0, gravity: "north_east" }, // Hidden watermark for uniqueness
+        { overlay: `text:Arial_50:Fusion+${timestamp % 1000}`, opacity: 0, gravity: "north_east" },
       ],
     });
   } catch (error) {
-    // If Cloudinary URL generation fails, return original
     console.warn("Cloudinary URL generation failed, using original image:", error);
     return initImage;
   }
@@ -639,24 +729,25 @@ export async function processFusionJob(jobId: string): Promise<void> {
     });
 
     // Step 2: Get mannequin template
-    // Use reference model if provided, otherwise use category template, or fallback to first fabric image
+    // Use reference model if provided, otherwise use category template, or create placeholder
     let mannequinTemplate = job.referenceModel;
     if (!mannequinTemplate) {
       const templateUrl = await getMannequinTemplate(job.category);
       if (templateUrl) {
         mannequinTemplate = templateUrl;
       } else {
-        // Template doesn't exist, use first fabric image as base
-        mannequinTemplate = job.fabricTop || job.fabricBottom || job.imageA || job.imageB;
-        if (!mannequinTemplate) {
-          throw new Error(
-            `No mannequin template found for category "${job.category}" and no fabric images provided. ` +
-            `Please upload at least one fabric image or provide a reference model.`
-          );
-        }
-        console.log(`Using fabric image as mannequin template: ${mannequinTemplate}`);
+        // Template doesn't exist, create a placeholder mannequin
+        // This ensures we always have a mannequin base, not just fabric
+        mannequinTemplate = createPlaceholderMannequin(job.category);
+        console.log(`Mannequin template not found, using placeholder for category: ${job.category}`);
       }
     }
+    
+    // Ensure we have fabric images to apply
+    if (!job.fabricTop && !job.fabricBottom && !job.fabricTrims && !job.imageA && !job.imageB) {
+      throw new Error("At least one fabric image is required to create the fusion");
+    }
+    
     await storage.updateFusionJob(jobId, { progress: 15 });
 
     // Step 3: Extract fabric features
@@ -716,7 +807,12 @@ export async function processFusionJob(jobId: string): Promise<void> {
           negativePrompt,
           edgeMap,
           mode,
-          job.strength
+          job.strength,
+          {
+            top: job.fabricTop || job.imageA,
+            bottom: job.fabricBottom || job.imageB,
+            trims: job.fabricTrims,
+          }
         );
 
         if (candidateUrl && candidateUrl !== mannequinTemplate) {
@@ -754,7 +850,12 @@ export async function processFusionJob(jobId: string): Promise<void> {
           negativePrompt,
           edgeMap,
           "hybrid",
-          job.strength
+          job.strength,
+          {
+            top: job.fabricTop || job.imageA,
+            bottom: job.fabricBottom || job.imageB,
+            trims: job.fabricTrims,
+          }
         );
         if (fallbackUrl) {
           candidates.push({ url: fallbackUrl, mode: "hybrid" });
