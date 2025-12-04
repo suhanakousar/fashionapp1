@@ -2,60 +2,42 @@
 # Hook: onUpload Event
 
 event: "onUpload"
-trigger: "User uploads two images for fusion"
+trigger: "User uploads fabric images (top, bottom, trims, or reference model)"
 files_affected:
-  - "client/src/components/FusionWorkspace.tsx"
+  - "client/src/components/FabricUploader.tsx"
   - "server/fusion.ts"
+  - "server/faceProtect.ts"
 
 actions:
-  - name: "validate_images"
-    description: "Validate image format, size, and content"
-    code_location: "server/fusion.ts:validateUpload"
-    checks:
-      - "File type: PNG, JPG, JPEG, WEBP"
-      - "Max size: 10MB per image"
-      - "Dimensions: Min 512x512, Max 2048x2048"
-      - "Aspect ratio: 0.5 to 2.0"
-  
+  - name: "upload_to_cloudinary"
+    description: "Upload image to Cloudinary"
+    code_location: "server/fusion.ts:uploadImages"
+    provider: "cloudinary"
+    folder: "fusion/uploads"
+    
   - name: "detect_faces"
     description: "Detect faces in uploaded images"
-    code_location: "server/fusionPipeline.ts:detectFaces"
-    provider: "cloudinary"
-    action_if_found: "auto_mask" # REVIEW REQUIRED: Policy decision
-    fallback: "request_consent"
-  
-  - name: "upload_to_cloudinary"
-    description: "Upload images to Cloudinary"
-    code_location: "server/fusion.ts:uploadImages"
-    folder: "fusion/uploads"
-    transformation: "q_auto:best"
-  
-  - name: "extract_features"
-    description: "Extract color palette and dominant patterns"
-    code_location: "server/fusionPipeline.ts:extractFeatures"
-    outputs:
-      - "palette_a": "Array of hex colors"
-      - "palette_b": "Array of hex colors"
-      - "dominant_pattern": "Pattern description string"
-  
+    code_location: "server/faceProtect.ts:detectFaces"
+    providers:
+      - "huggingface" # damo/retinaface
+      - "bytez" # fallback
+      - "cloudinary" # fallback
+    review_required: true  # Face detection policy
+    
+  - name: "check_consent"
+    description: "Check if user consented to face masking"
+    code_location: "server/faceProtect.ts:checkFaceProtection"
+    requires_consent: true
+    
   - name: "update_ui"
-    description: "Update FusionWorkspace component with preview"
-    code_location: "client/src/components/FusionWorkspace.tsx:handleUpload"
+    description: "Update UI with upload status and face detection notice"
+    code_location: "client/src/components/FabricUploader.tsx:handleUpload"
     state_updates:
-      - "imageA": "Cloudinary URL"
-      - "imageB": "Cloudinary URL"
-      - "previewReady": true
+      - "fabricTop/fabricBottom/fabricTrims/referenceModel": "Cloudinary URL"
+      - "faceDetected": "boolean"
+      - "uploading": "string | null"
 
-error_handling:
-  - error: "Face detected without consent"
-    action: "abort_upload"
-    message: "Faces detected. Please provide consent for face masking or use images without faces."
-  
-  - error: "Invalid image format"
-    action: "reject_upload"
-    message: "Please upload PNG, JPG, or WEBP images."
-  
-  - error: "Image too large"
-    action: "reject_upload"
-    message: "Images must be under 10MB and 2048x2048px."
-
+outputs:
+  - "imageUrl": "Cloudinary secure URL"
+  - "faceDetected": "boolean"
+  - "requiresConsent": "boolean"

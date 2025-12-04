@@ -29,7 +29,7 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { 
     fileSize: 10 * 1024 * 1024, // 10MB
-    files: 2 // Allow up to 2 files
+    files: 5 // Allow up to 5 files (top, bottom, trims, reference, legacy)
   },
   fileFilter: (req, file, cb) => {
     // More lenient file type checking
@@ -139,26 +139,45 @@ export async function uploadImages(files: Express.Multer.File[]): Promise<string
   return Promise.all(uploadPromises);
 }
 
-// Create fusion job
+// Create fusion job (enhanced version)
 export async function createFusionJob(
-  imageA: string,
-  imageB: string,
-  mode: "pattern" | "color" | "texture",
-  strength: number,
-  designerId?: string
+  data: {
+    category: string;
+    fabricTop?: string;
+    fabricBottom?: string;
+    fabricTrims?: string;
+    referenceModel?: string;
+    // Legacy support
+    imageA?: string;
+    imageB?: string;
+    mode: string;
+    strength: number;
+    stitchStyle?: string;
+    embroideryToggle?: boolean;
+    designerId?: string;
+    userConsent?: boolean; // REVIEW REQUIRED: Face protection consent
+  }
 ): Promise<string> {
   const jobId = crypto.randomUUID();
   
   // Store job in database
   const newJob = await storage.createFusionJob({
     jobId,
-    imageA,
-    imageB,
-    mode,
-    strength,
+    category: data.category as any,
+    fabricTop: data.fabricTop,
+    fabricBottom: data.fabricBottom,
+    fabricTrims: data.fabricTrims,
+    referenceModel: data.referenceModel,
+    // Legacy support
+    imageA: data.imageA,
+    imageB: data.imageB,
+    mode: data.mode as any,
+    strength: data.strength,
+    stitchStyle: data.stitchStyle,
+    embroideryToggle: data.embroideryToggle,
     status: "pending",
     progress: 0,
-    designerId,
+    designerId: data.designerId,
   });
 
   // Start processing in background (non-blocking)
@@ -178,7 +197,7 @@ export function setupFusionRoutes(app: express.Express) {
     "/api/fusion/upload",
     (req: Request, res: Response, next: express.NextFunction) => {
       // Handle multer errors
-      upload.array("images", 2)(req, res, (err: any) => {
+      upload.array("images", 5)(req, res, (err: any) => {
         if (err) {
           console.error("Multer error:", err);
           console.error("Multer error code:", err.code);
@@ -188,7 +207,7 @@ export function setupFusionRoutes(app: express.Express) {
             return res.status(400).json({ error: "File too large. Maximum size is 10MB per file." });
           }
           if (err.code === "LIMIT_FILE_COUNT") {
-            return res.status(400).json({ error: "Too many files. Maximum is 2 files." });
+            return res.status(400).json({ error: "Too many files. Maximum is 5 files." });
           }
           if (err.code === "LIMIT_UNEXPECTED_FILE") {
             return res.status(400).json({ error: "Unexpected file field. Use 'images' field name." });
@@ -266,24 +285,61 @@ export function setupFusionRoutes(app: express.Express) {
     }
   );
 
-  // Create fusion job
+  // Create fusion job (enhanced)
   app.post("/api/fusion/create", async (req: Request, res: Response) => {
     try {
-      const { imageA, imageB, mode, strength } = req.body;
+      const {
+        category,
+        fabricTop,
+        fabricBottom,
+        fabricTrims,
+        referenceModel,
+        // Legacy support
+        imageA,
+        imageB,
+        mode,
+        strength,
+        stitchStyle,
+        embroideryToggle,
+        userConsent,
+      } = req.body;
 
-      if (!imageA || !imageB) {
-        return res.status(400).json({ error: "Both imageA and imageB required" });
+      // Validate category
+      const validCategories = ["lehenga", "blouse", "gown", "saree", "salwar", "dress", "top", "skirt", "other"];
+      if (!category || !validCategories.includes(category)) {
+        return res.status(400).json({ error: "Valid category required" });
       }
 
-      if (!["pattern", "color", "texture"].includes(mode)) {
-        return res.status(400).json({ error: "Invalid mode" });
+      // Validate at least one fabric or legacy images
+      if (!fabricTop && !fabricBottom && !fabricTrims && !imageA && !imageB) {
+        return res.status(400).json({ error: "At least one fabric image required" });
       }
 
-      if (typeof strength !== "number" || strength < 0.5 || strength > 0.9) {
-        return res.status(400).json({ error: "Strength must be between 0.5 and 0.9" });
+      // Validate mode
+      const validModes = ["silhouette-first", "texture-first", "hybrid", "pattern", "color", "texture"];
+      if (!mode || !validModes.includes(mode)) {
+        return res.status(400).json({ error: "Valid mode required" });
       }
 
-      const jobId = await createFusionJob(imageA, imageB, mode, strength);
+      // Validate strength
+      if (typeof strength !== "number" || strength < 0.35 || strength > 0.7) {
+        return res.status(400).json({ error: "Strength must be between 0.35 and 0.7" });
+      }
+
+      const jobId = await createFusionJob({
+        category,
+        fabricTop,
+        fabricBottom,
+        fabricTrims,
+        referenceModel,
+        imageA,
+        imageB,
+        mode,
+        strength,
+        stitchStyle,
+        embroideryToggle,
+        userConsent,
+      });
 
       res.json({
         success: true,

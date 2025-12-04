@@ -269,19 +269,34 @@ export const insertWhatsAppMessageSchema = z.object({
 
 // Fusion Job types
 export type FusionJobStatus = "pending" | "processing" | "completed" | "failed";
+export type GarmentCategory = "lehenga" | "blouse" | "gown" | "saree" | "salwar" | "dress" | "top" | "skirt" | "other";
+export type FusionMode = "silhouette-first" | "texture-first" | "hybrid";
 
 export interface FusionJob {
   _id?: string;
   id: string;
   jobId: string; // UUID for external reference
-  imageA: string; // Cloudinary URL
-  imageB: string; // Cloudinary URL
-  mode: "pattern" | "color" | "texture";
-  strength: number; // 0.5-0.9
+  // New structure: category-based with multiple fabrics
+  category: GarmentCategory;
+  fabricTop?: string; // Cloudinary URL - top fabric image
+  fabricBottom?: string; // Cloudinary URL - bottom fabric image
+  fabricTrims?: string; // Cloudinary URL - trims/buttons/motif
+  referenceModel?: string; // Cloudinary URL - optional reference model dress
+  // Legacy support (for backward compatibility)
+  imageA?: string; // Cloudinary URL
+  imageB?: string; // Cloudinary URL
+  mode: FusionMode | "pattern" | "color" | "texture"; // Support both old and new modes
+  strength: number; // 0.35-0.7 (adjusted for new modes)
+  stitchStyle?: string; // Optional: "french", "overlock", "zigzag", etc.
+  embroideryToggle?: boolean; // Optional: enable embroidery effects
   status: FusionJobStatus;
   progress: number; // 0-100
   resultUrl?: string; // Cloudinary URL
-  candidates?: string[]; // Array of Cloudinary URLs
+  candidates?: Array<{
+    url: string; // Cloudinary URL
+    mode: FusionMode;
+    thumbnail?: string;
+  }>;
   explainability?: {
     heatmap: string; // Base64 encoded
     designerNote: string;
@@ -289,13 +304,22 @@ export interface FusionJob {
       region: string;
       contribution: number; // 0-1
       pattern: string;
+      fabricSource: "top" | "bottom" | "trims" | "reference";
+    }>;
+    fabricPatches?: Array<{
+      fabricType: "top" | "bottom" | "trims";
+      patchUrl: string;
+      matchedRegions: Array<{ x: number; y: number; width: number; height: number }>;
     }>;
   };
   metadata?: {
-    paletteA?: string[]; // Hex colors
-    paletteB?: string[]; // Hex colors
+    paletteTop?: string[]; // Hex colors from top fabric
+    paletteBottom?: string[]; // Hex colors from bottom fabric
+    paletteTrims?: string[]; // Hex colors from trims
     dominantPattern?: string;
     garmentType?: string;
+    faceProtected?: boolean; // REVIEW REQUIRED: Face protection flag
+    mannequinTemplate?: string; // URL to canonical mannequin template used
   };
   designerId?: string;
   error?: string;
@@ -305,14 +329,26 @@ export interface FusionJob {
 
 export const insertFusionJobSchema = z.object({
   jobId: z.string().uuid(),
-  imageA: z.string().url(),
-  imageB: z.string().url(),
-  mode: z.enum(["pattern", "color", "texture"]),
-  strength: z.number().min(0.5).max(0.9),
+  category: z.enum(["lehenga", "blouse", "gown", "saree", "salwar", "dress", "top", "skirt", "other"]),
+  fabricTop: z.string().url().optional(),
+  fabricBottom: z.string().url().optional(),
+  fabricTrims: z.string().url().optional(),
+  referenceModel: z.string().url().optional(),
+  // Legacy support
+  imageA: z.string().url().optional(),
+  imageB: z.string().url().optional(),
+  mode: z.enum(["silhouette-first", "texture-first", "hybrid", "pattern", "color", "texture"]),
+  strength: z.number().min(0.35).max(0.7),
+  stitchStyle: z.string().optional(),
+  embroideryToggle: z.boolean().optional(),
   status: z.enum(["pending", "processing", "completed", "failed"]).default("pending"),
   progress: z.number().min(0).max(100).default(0),
   resultUrl: z.string().url().optional(),
-  candidates: z.array(z.string().url()).optional(),
+  candidates: z.array(z.object({
+    url: z.string().url(),
+    mode: z.enum(["silhouette-first", "texture-first", "hybrid"]),
+    thumbnail: z.string().url().optional(),
+  })).optional(),
   explainability: z.object({
     heatmap: z.string().optional(),
     designerNote: z.string().optional(),
@@ -320,6 +356,17 @@ export const insertFusionJobSchema = z.object({
       region: z.string(),
       contribution: z.number().min(0).max(1),
       pattern: z.string(),
+      fabricSource: z.enum(["top", "bottom", "trims", "reference"]).optional(),
+    })).optional(),
+    fabricPatches: z.array(z.object({
+      fabricType: z.enum(["top", "bottom", "trims"]),
+      patchUrl: z.string().url(),
+      matchedRegions: z.array(z.object({
+        x: z.number(),
+        y: z.number(),
+        width: z.number(),
+        height: z.number(),
+      })),
     })).optional(),
   }).optional(),
   metadata: z.record(z.unknown()).optional(),

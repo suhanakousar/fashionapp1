@@ -1144,10 +1144,17 @@ function toFusionJob(doc: any): FusionJob {
   return {
     id: doc.id || doc._id?.toString() || "",
     jobId: doc.jobId,
-    imageA: doc.imageA,
-    imageB: doc.imageB,
+    category: doc.category || "other", // Required field with default
+    fabricTop: doc.fabricTop,
+    fabricBottom: doc.fabricBottom,
+    fabricTrims: doc.fabricTrims,
+    referenceModel: doc.referenceModel,
+    imageA: doc.imageA, // Legacy support
+    imageB: doc.imageB, // Legacy support
     mode: doc.mode,
     strength: doc.strength,
+    stitchStyle: doc.stitchStyle,
+    embroideryToggle: doc.embroideryToggle,
     status: doc.status || "pending",
     progress: doc.progress || 0,
     resultUrl: doc.resultUrl,
