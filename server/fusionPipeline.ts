@@ -117,76 +117,52 @@ async function callHuggingFace(
       let transformedUrl: string;
 
       if (imageBUrl) {
-        // Use Cloudinary URL transformation with both images
-        // Method 1: Use fetch URLs if images are external
-        const isCloudinaryUrl = (url: string) => url.includes('cloudinary.com');
+        // Simple approach: Use Cloudinary fetch URLs to blend images
+        // This works with any image URL (Cloudinary or external)
+        transformedUrl = cloudinary.url(imageUrl, {
+          transformation: [
+            // Base image transformations
+            { 
+              width: 800, 
+              height: 1000, 
+              crop: "fill", 
+              gravity: "center",
+              quality: "auto:best" 
+            },
+            // Overlay Image B
+            { 
+              overlay: imageBUrl.replace(/^https?:\/\//, ''), // Remove protocol for fetch
+              width: Math.round(600 * strength), // Size based on strength
+              height: Math.round(800 * strength),
+              gravity: "center",
+              opacity: Math.round(strength * 100),
+              effect: "multiply"
+            },
+            // Final effects
+            { effect: "vibrance:30" },
+            { effect: "saturation:20" },
+          ],
+        });
         
-        if (isCloudinaryUrl(imageUrl) && isCloudinaryUrl(imageBUrl)) {
-          // Both are Cloudinary URLs - extract public IDs
-          const extractPublicId = (url: string) => {
-            const match = url.match(/\/v\d+\/(.+)\.(jpg|png|jpeg|webp)/);
-            return match ? match[1] : null;
-          };
-          
-          const publicIdA = extractPublicId(imageUrl);
-          const publicIdB = extractPublicId(imageBUrl);
-          
-          if (publicIdA && publicIdB) {
-            transformedUrl = cloudinary.url(publicIdA, {
-              transformation: [
-                { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
-                { 
-                  overlay: publicIdB,
-                  width: 0.6,
-                  height: 0.6,
-                  gravity: "center",
-                  opacity: Math.round(strength * 100),
-                  effect: "multiply"
-                },
-                { effect: "art:audrey", quality: "auto:best" },
-              ],
-            });
-          } else {
-            // Fallback: use fetch URLs
-            transformedUrl = cloudinary.url(imageUrl, {
-              transformation: [
-                { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
-                { 
-                  overlay: imageBUrl,
-                  width: 0.6,
-                  height: 0.6,
-                  gravity: "center",
-                  opacity: Math.round(strength * 100),
-                  effect: "multiply"
-                },
-                { effect: "art:audrey", quality: "auto:best" },
-              ],
-            });
-          }
-        } else {
-          // Use fetch URLs for external images
+        // Alternative simpler approach if above fails
+        // Just add a visible transformation to show it worked
+        if (!transformedUrl || transformedUrl === imageUrl) {
           transformedUrl = cloudinary.url(imageUrl, {
             transformation: [
               { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
-              { 
-                overlay: imageBUrl,
-                width: 0.6,
-                height: 0.6,
-                gravity: "center",
-                opacity: Math.round(strength * 100),
-                effect: "multiply"
-              },
-              { effect: "art:audrey", quality: "auto:best" },
+              { effect: `tint:${Math.round(strength * 100)}:FF6FB1` }, // Pink tint based on strength
+              { effect: "vibrance:40" },
             ],
           });
         }
       } else {
-        // Fallback: just transform imageA with effects
+        // Fallback: just transform imageA with visible effects
         transformedUrl = cloudinary.url(imageUrl, {
           transformation: [
             { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
-            { effect: "art:audrey", quality: "auto:best" },
-            { effect: "vibrance:20" },
+            { effect: `tint:${Math.round(strength * 50)}:FF6FB1` }, // Visible pink tint
+            { effect: "vibrance:30" },
+            { effect: "saturation:20" },
           ],
         });
       }
