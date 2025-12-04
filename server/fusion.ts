@@ -95,54 +95,6 @@ export async function validateUpload(file: Express.Multer.File): Promise<{
   return { valid: true };
 }
 
-/**
- * Upload mannequin template to Cloudinary
- * Used to set the default mannequin image for fusion
- */
-export async function uploadMannequinTemplate(
-  file: Express.Multer.File,
-  category?: string
-): Promise<string> {
-  return new Promise<string>((resolve, reject) => {
-    try {
-      const publicId = category 
-        ? `fusion/mannequins/${category}_template`
-        : "fusion/mannequins/generic_template";
-
-      // Convert buffer to stream for Cloudinary
-      const bufferStream = new Readable();
-      bufferStream.push(file.buffer);
-      bufferStream.push(null);
-
-      const uploadStream = cloudinary.uploader.upload_stream(
-        {
-          public_id: publicId,
-          folder: "fusion/mannequins",
-          resource_type: "image",
-          overwrite: true, // Allow overwriting existing templates
-          transformation: [{ quality: "auto:best", width: 1024, height: 1536, crop: "limit" }],
-        },
-        (error, result) => {
-          if (error) {
-            console.error("Cloudinary mannequin upload error:", error);
-            reject(error);
-          } else if (result) {
-            console.log(`Mannequin template uploaded: ${publicId}`);
-            resolve(result.secure_url);
-          } else {
-            reject(new Error("Cloudinary upload failed: No result returned"));
-          }
-        }
-      );
-
-      bufferStream.pipe(uploadStream);
-    } catch (error) {
-      console.error("Error preparing mannequin upload:", error);
-      reject(error);
-    }
-  });
-}
-
 // Upload images to Cloudinary
 export async function uploadImages(files: Express.Multer.File[]): Promise<string[]> {
   const uploadPromises = files.map((file) => {
