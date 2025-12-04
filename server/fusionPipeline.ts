@@ -17,16 +17,17 @@ import { Readable } from "stream";
 const USE_MOCK = process.env.NODE_ENV === "mock" || (!process.env.HUGGINGFACE_API_KEY && !process.env.BYTEZ_API_KEY);
 
 // Mannequin templates per category (canonical poses)
+// Store as public_ids (without version numbers) to avoid URL transformation issues
 const MANNEQUIN_TEMPLATES: Record<GarmentCategory, string> = {
-  lehenga: "https://res.cloudinary.com/dzxawjlvs/image/upload/v1/fusion/mannequins/lehenga_template",
-  blouse: "https://res.cloudinary.com/dzxawjlvs/image/upload/v1/fusion/mannequins/blouse_template",
-  gown: "https://res.cloudinary.com/dzxawjlvs/image/upload/v1/fusion/mannequins/gown_template",
-  saree: "https://res.cloudinary.com/dzxawjlvs/image/upload/v1/fusion/mannequins/saree_template",
-  salwar: "https://res.cloudinary.com/dzxawjlvs/image/upload/v1/fusion/mannequins/salwar_template",
-  dress: "https://res.cloudinary.com/dzxawjlvs/image/upload/v1/fusion/mannequins/dress_template",
-  top: "https://res.cloudinary.com/dzxawjlvs/image/upload/v1/fusion/mannequins/top_template",
-  skirt: "https://res.cloudinary.com/dzxawjlvs/image/upload/v1/fusion/mannequins/skirt_template",
-  other: "https://res.cloudinary.com/dzxawjlvs/image/upload/v1/fusion/mannequins/generic_template",
+  lehenga: "fusion/mannequins/lehenga_template",
+  blouse: "fusion/mannequins/blouse_template",
+  gown: "fusion/mannequins/gown_template",
+  saree: "fusion/mannequins/saree_template",
+  salwar: "fusion/mannequins/salwar_template",
+  dress: "fusion/mannequins/dress_template",
+  top: "fusion/mannequins/top_template",
+  skirt: "fusion/mannequins/skirt_template",
+  other: "fusion/mannequins/generic_template",
 };
 
 interface ImageFeatures {
@@ -142,9 +143,15 @@ export async function extractFabricFeatures(
 
 /**
  * Get mannequin template for category
+ * Returns Cloudinary URL from public_id
  */
 function getMannequinTemplate(category: GarmentCategory): string {
-  return MANNEQUIN_TEMPLATES[category] || MANNEQUIN_TEMPLATES.other;
+  const publicId = MANNEQUIN_TEMPLATES[category] || MANNEQUIN_TEMPLATES.other;
+  // Generate clean URL from public_id (no transformations)
+  return cloudinary.url(publicId, {
+    secure: true,
+    resource_type: "image",
+  });
 }
 
 /**
@@ -308,10 +315,23 @@ function generateMockFusion(initImage: string, controlnetImage: string, strength
     return initImage;
   }
 
+  // Ensure we have a clean public_id (no transformations in it)
+  // Remove any transformation-like patterns that might have been extracted
+  const cleanPublicId = publicId.split("/").filter(part => 
+    !part.includes("c_") && 
+    !part.includes("w_") && 
+    !part.includes("h_") && 
+    !part.includes("q_") &&
+    !part.includes("v1") &&
+    !part.includes("v2")
+  ).join("/");
+
   // Create a transformed version that looks different
   // This simulates the fusion effect
   const timestamp = Date.now();
-  return cloudinary.url(publicId, {
+  return cloudinary.url(cleanPublicId, {
+    secure: true,
+    resource_type: "image",
     transformation: [
       { width: 1024, height: 1024, crop: "fill", quality: "auto:best" },
       { effect: `tint:${Math.round(strength * 60)}:FF6FB1` },
@@ -474,16 +494,58 @@ async function upscaleImage(imageUrl: string): Promise<string> {
 /**
  * Extract Cloudinary public ID
  */
+/**
+ * Extract Cloudinary public ID from URL
+ * Handles various Cloudinary URL formats including transformations
+ */
 function extractPublicId(url: string): string | null {
   try {
     if (url.includes("cloudinary.com")) {
-      const match = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
-      if (match && match[1]) {
-        return match[1].replace(/\.(jpg|jpeg|png|webp)$/i, "");
+      // If URL contains transformations (has slashes after /upload/), we need to extract differently
+      // Pattern 1: /upload/[transformations]/[version]/[public_id]
+      // Pattern 2: /upload/[version]/[public_id]
+      // Pattern 3: /upload/[public_id]
+      
+      // First, try to find the public_id after the last transformation segment
+      // Cloudinary URLs with transformations look like: /upload/t_xxx/v1/public_id
+      const uploadMatch = url.match(/\/upload\/(.+?)(?:\?|$)/);
+      if (uploadMatch && uploadMatch[1]) {
+        const pathAfterUpload = uploadMatch[1];
+        
+        // Check if it has version number (v1, v2, etc.)
+        const versionMatch = pathAfterUpload.match(/v\d+\/(.+?)(?:\?|$)/);
+        if (versionMatch && versionMatch[1]) {
+          // Has version number, extract public_id after it
+          let publicId = versionMatch[1].split("?")[0];
+          // Remove file extension
+          publicId = publicId.replace(/\.(jpg|jpeg|png|webp|gif)$/i, "");
+          return publicId;
+        }
+        
+        // No version number, might be transformations or direct public_id
+        // Check if it looks like transformations (contains underscores, colons, etc.)
+        if (pathAfterUpload.includes("c_") || pathAfterUpload.includes("w_") || pathAfterUpload.includes("h_")) {
+          // This looks like transformations, try to find public_id after last slash
+          const parts = pathAfterUpload.split("/");
+          if (parts.length > 0) {
+            const lastPart = parts[parts.length - 1].split("?")[0];
+            const publicId = lastPart.replace(/\.(jpg|jpeg|png|webp|gif)$/i, "");
+            // Only return if it doesn't look like a transformation parameter
+            if (!publicId.includes(":") && (!publicId.includes("_") || publicId.includes("/"))) {
+              return publicId;
+            }
+          }
+        } else {
+          // No transformations, treat as direct public_id
+          let publicId = pathAfterUpload.split("?")[0];
+          publicId = publicId.replace(/\.(jpg|jpeg|png|webp|gif)$/i, "");
+          return publicId;
+        }
       }
     }
     return null;
   } catch (e) {
+    console.error("Error extracting public ID:", e);
     return null;
   }
 }
