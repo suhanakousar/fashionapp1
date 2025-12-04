@@ -90,32 +90,81 @@ function constructPrompt(
 
 /**
  * Call HuggingFace API for image-to-image generation
+ * @param imageUrl - Base image (Image A)
+ * @param prompt - Text prompt describing the fusion
+ * @param negativePrompt - What to avoid in generation
+ * @param strength - How much to transform (0.5-0.9)
+ * @param imageBUrl - Second image to blend (Image B) - optional for mock mode
  */
 async function callHuggingFace(
   imageUrl: string,
   prompt: string,
   negativePrompt: string,
-  strength: number
+  strength: number,
+  imageBUrl?: string // Add imageB for blending
 ): Promise<string> {
   if (USE_MOCK) {
-    // Return mock result for development - use Cloudinary transformations to create visual difference
-    console.log("Using mock HuggingFace response - creating transformed image");
+    // Return mock result for development - use Cloudinary to blend both images
+    console.log("Using mock HuggingFace response - creating fused image from both inputs");
     try {
-      // Create a transformed version using Cloudinary to simulate fusion
-      const transformedUrl = cloudinary.url(imageUrl, {
-        transformation: [
-          {
-            effect: "art:audrey", // Artistic effect to simulate fusion
-            quality: "auto:best",
-          },
-          {
-            overlay: "text:Arial_50_bold:FUSION",
-            gravity: "center",
-            color: "#FF6FB1",
-            opacity: 30,
-          },
-        ],
-      });
+      // Extract public IDs from URLs
+      const getPublicId = (url: string) => {
+        const parts = url.split('/');
+        const filename = parts[parts.length - 1];
+        return filename.split('.')[0];
+      };
+
+      const publicIdA = getPublicId(imageUrl);
+      let transformedUrl: string;
+
+      if (imageBUrl) {
+        // Blend both images using Cloudinary
+        const publicIdB = getPublicId(imageBUrl);
+        transformedUrl = cloudinary.url(publicIdA, {
+          transformation: [
+            {
+              width: 800,
+              height: 1000,
+              crop: "fill",
+              gravity: "center",
+              quality: "auto:best",
+            },
+            {
+              overlay: publicIdB,
+              width: 0.5, // 50% blend
+              height: 0.5,
+              gravity: "center",
+              opacity: Math.round(strength * 100), // Use strength for blend opacity
+              effect: "multiply", // Blend mode
+            },
+            {
+              effect: "art:audrey", // Artistic effect
+              quality: "auto:best",
+            },
+            {
+              overlay: {
+                text: "FUSION",
+                font_family: "Arial",
+                font_size: 40,
+                font_weight: "bold",
+              },
+              gravity: "south_east",
+              color: "#FF6FB1",
+              opacity: 20,
+            },
+          ],
+        });
+      } else {
+        // Fallback: just transform imageA
+        transformedUrl = cloudinary.url(publicIdA, {
+          transformation: [
+            {
+              effect: "art:audrey",
+              quality: "auto:best",
+            },
+          ],
+        });
+      }
       return transformedUrl;
     } catch (error) {
       console.error("Mock transformation error:", error);

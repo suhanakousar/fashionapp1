@@ -119,11 +119,20 @@ export function MannequinCanvas({
           <img
             src={imageUrl}
             alt="Fusion design on mannequin"
-            className="max-w-full max-h-full object-contain"
+            className="max-w-full max-h-full object-contain drop-shadow-2xl"
             draggable={false}
             loading="lazy"
             decoding="async"
+            style={{
+              mixBlendMode: "multiply", // Better blending with mannequin
+            }}
           />
+        </div>
+        
+        {/* Info Badge */}
+        <div className="absolute top-2 right-2 bg-background/90 rounded px-2 py-1 text-xs flex items-center gap-1">
+          <span className="w-2 h-2 bg-primary rounded-full animate-pulse" />
+          Fusion Result
         </div>
 
         {/* Spooky Overlay Toggle */}
