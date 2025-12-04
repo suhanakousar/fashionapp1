@@ -514,7 +514,8 @@ export async function processFusionJob(jobId: string): Promise<void> {
     if (job.imageA) imageUrls.push(job.imageA);
     if (job.imageB) imageUrls.push(job.imageB);
 
-    const faceCheck = await checkFaceProtection(imageUrls);
+    // Pass user consent to face protection check
+    const faceCheck = await checkFaceProtection(imageUrls, job.userConsent);
     if (faceCheck.requiresProtection && !faceCheck.protected) {
       await storage.updateFusionJob(jobId, {
         status: "failed",

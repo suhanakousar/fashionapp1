@@ -4,6 +4,8 @@ import { Label } from "@/components/ui/label";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Checkbox } from "@/components/ui/checkbox";
 import type { FusionMode } from "../../../shared/schema.js";
 
 interface FusionOptionsProps {
@@ -15,6 +17,9 @@ interface FusionOptionsProps {
   onStrengthChange: (strength: number) => void;
   onStitchStyleChange?: (style: string) => void;
   onEmbroideryToggle?: (enabled: boolean) => void;
+  faceDetected?: boolean;
+  faceConsent?: boolean;
+  onFaceConsentChange?: (consent: boolean) => void;
 }
 
 const STITCH_STYLES = [
@@ -34,6 +39,9 @@ export function FusionOptions({
   onStrengthChange,
   onStitchStyleChange,
   onEmbroideryToggle,
+  faceDetected,
+  faceConsent,
+  onFaceConsentChange,
 }: FusionOptionsProps) {
   return (
     <Card>
@@ -113,6 +121,35 @@ export function FusionOptions({
               onCheckedChange={onEmbroideryToggle}
             />
           </div>
+        )}
+
+        {/* Face Consent (if faces detected) */}
+        {faceDetected && onFaceConsentChange && (
+          <Alert className="border-amber-500 bg-amber-50 dark:bg-amber-950/20">
+            <AlertDescription>
+              <div className="space-y-2">
+                <p className="font-medium">⚠️ Faces Detected</p>
+                <p className="text-sm">
+                  Faces were detected in your uploaded images. To protect privacy, faces will be automatically masked during processing.
+                </p>
+                <div className="flex items-center space-x-2 pt-2">
+                  <Checkbox
+                    id="face-consent"
+                    checked={faceConsent || false}
+                    onCheckedChange={(checked) => onFaceConsentChange(checked === true)}
+                  />
+                  <Label htmlFor="face-consent" className="text-sm cursor-pointer font-normal">
+                    I consent to face masking for privacy protection
+                  </Label>
+                </div>
+                {!faceConsent && (
+                  <p className="text-xs text-amber-700 dark:text-amber-400 mt-1">
+                    You must provide consent to proceed with images containing faces.
+                  </p>
+                )}
+              </div>
+            </AlertDescription>
+          </Alert>
         )}
       </CardContent>
     </Card>

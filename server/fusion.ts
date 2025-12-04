@@ -175,6 +175,7 @@ export async function createFusionJob(
     strength: data.strength,
     stitchStyle: data.stitchStyle,
     embroideryToggle: data.embroideryToggle,
+    userConsent: data.userConsent, // Store user consent for face masking
     status: "pending",
     progress: 0,
     designerId: data.designerId,

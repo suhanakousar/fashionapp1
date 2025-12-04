@@ -289,6 +289,7 @@ export interface FusionJob {
   strength: number; // 0.35-0.7 (adjusted for new modes)
   stitchStyle?: string; // Optional: "french", "overlock", "zigzag", etc.
   embroideryToggle?: boolean; // Optional: enable embroidery effects
+  userConsent?: boolean; // REVIEW REQUIRED: User consent for face masking
   status: FusionJobStatus;
   progress: number; // 0-100
   resultUrl?: string; // Cloudinary URL
@@ -341,6 +342,7 @@ export const insertFusionJobSchema = z.object({
   strength: z.number().min(0.35).max(0.7),
   stitchStyle: z.string().optional(),
   embroideryToggle: z.boolean().optional(),
+  userConsent: z.boolean().optional(), // REVIEW REQUIRED: User consent for face masking
   status: z.enum(["pending", "processing", "completed", "failed"]).default("pending"),
   progress: z.number().min(0).max(100).default(0),
   resultUrl: z.string().url().optional(),

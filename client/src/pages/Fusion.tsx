@@ -99,6 +99,12 @@ export default function Fusion() {
       return;
     }
 
+    // Check if faces detected but no consent given
+    if (faceDetected && !faceConsent) {
+      alert("Please provide consent for face masking to proceed with images containing faces.");
+      return;
+    }
+
     setStep("generate");
     setJobStatus("pending");
     setJobProgress(0);
@@ -217,6 +223,9 @@ export default function Fusion() {
                   onStrengthChange={setStrength}
                   onStitchStyleChange={setStitchStyle}
                   onEmbroideryToggle={setEmbroideryToggle}
+                  faceDetected={faceDetected}
+                  faceConsent={faceConsent}
+                  onFaceConsentChange={setFaceConsent}
                 />
               )}
 
