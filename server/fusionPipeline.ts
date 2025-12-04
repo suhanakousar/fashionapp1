@@ -382,12 +382,21 @@ export async function processFusionJob(jobId: string): Promise<void> {
     // Step 4: Generate fusion (3 candidates)
     const candidates: string[] = [];
     for (let i = 0; i < 3; i++) {
+      console.log(`Generating candidate ${i + 1}/3...`);
       const candidate = await callHuggingFace(
         job.imageA,
         prompt,
         negativePrompt,
-        job.strength
+        job.strength,
+        job.imageB // Pass imageB for blending
       );
+      
+      if (!candidate) {
+        console.error(`Candidate ${i + 1} generation failed`);
+        continue;
+      }
+      
+      console.log(`Candidate ${i + 1} generated:`, candidate);
       candidates.push(candidate);
       await storage.updateFusionJob(jobId, {
         progress: 40 + (i + 1) * 15, // 40, 55, 70
@@ -396,7 +405,24 @@ export async function processFusionJob(jobId: string): Promise<void> {
     }
 
     // Step 5: Select best candidate (use first for now)
+    if (candidates.length === 0) {
+      console.error("No candidates generated, using fallback");
+      // Fallback: use imageA with transformation
+      const fallbackUrl = await callHuggingFace(
+        job.imageA,
+        prompt,
+        negativePrompt,
+        job.strength,
+        job.imageB
+      );
+      if (!fallbackUrl) {
+        throw new Error("Failed to generate any fusion result");
+      }
+      candidates.push(fallbackUrl);
+    }
+    
     const resultUrl = candidates[0];
+    console.log("Selected result URL:", resultUrl);
 
     await storage.updateFusionJob(jobId, {
       progress: 75,
