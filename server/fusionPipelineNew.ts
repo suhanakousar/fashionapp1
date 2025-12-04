@@ -161,9 +161,13 @@ export async function processReplaceOutfitJob(jobIdStr: string) {
       ? `${paletteBottom.colors.slice(0, 3).join(", ")}; texture: ${paletteBottom.texture || "fabric"}`
       : "fabric bottom sample";
 
-    const silhouettePrompt = `Photorealistic inpainting. Preserve the model's exact pose and silhouette. Replace the top region (blouse/shirt) with the uploaded top fabric: ${topDesc}. Replace the bottom region (skirt/trouser) with uploaded bottom fabric: ${bottomDesc}. Keep skin tones, face and hair unmodified. Ensure realistic seams, folds and lighting.`;
-    const texturePrompt = `Photorealistic inpainting. Prioritize fabric motif fidelity. Apply patterns from top fabric to top region and bottom fabric to bottom region, ensuring pattern scale is natural and repeats appropriately. Preserve pose and identity.`;
-    const hybridPrompt = `Balanced fusion. Preserve silhouette while integrating strong motif & color cues from uploaded fabrics (top: ${topDesc}; bottom: ${bottomDesc}). Natural seams and drape.`;
+    // Get fabric URLs for prompt enhancement
+    const topFabricUrlForPrompt = jobDoc.fabricTop || jobDoc.imageA;
+    const bottomFabricUrlForPrompt = jobDoc.fabricBottom || jobDoc.imageB;
+    
+    const silhouettePrompt = `Photorealistic inpainting. Preserve the model's exact pose, silhouette, and body shape. Apply the EXACT fabric texture and pattern from the reference fabric image to the top region (blouse/shirt). Use the fabric colors: ${topDesc}. Keep the same garment silhouette, seams, and folds. Do NOT change the model's pose, face, skin, hands, or background. The fabric should drape naturally on the existing garment shape.`;
+    const texturePrompt = `Photorealistic inpainting. Apply the EXACT fabric pattern and texture from the reference fabric image to the garment region. Match the fabric's colors, motifs, and texture details precisely. Preserve the model's pose, silhouette, and body shape. Keep face and skin unmodified. Ensure the fabric pattern scales naturally and follows the garment's folds and seams.`;
+    const hybridPrompt = `Balanced fusion: Apply the exact fabric texture from the reference image to the garment while preserving the model's pose and silhouette. Match fabric colors (${topDesc}) and patterns precisely. Keep natural garment drape, seams, and folds. Do not modify face, skin, or background.`;
 
     await storage.updateFusionJob(jobIdStr, {
       metadata: {
@@ -203,10 +207,16 @@ export async function processReplaceOutfitJob(jobIdStr: string) {
     const controlnetModelId = "lllyasviel/control_v11p_sd15_canny"; // if Bytez exposes a merged endpoint you can pass controlnet payloads in one call
 
     // Build common payload bits
-    const initImage = modelImageUrl; // We will use model image as init image and mask region for inpainting
+    // CRITICAL: initImage must be the MODEL/MANNEQUIN image, NOT the fabric
+    const initImage = modelImageUrl; // Model/mannequin image - this is what we're modifying
     const topMaskBase64 = samModelMasks.topMaskBase64; // may be undefined
     const bottomMaskBase64 = samModelMasks.bottomMaskBase64;
     const edgeMapUrl = edgeUpload.secure_url;
+    
+    // Validate that initImage is actually the model, not fabric
+    console.log(`[fusion] Using model image as init_image: ${initImage.substring(0, 80)}...`);
+    console.log(`[fusion] Top fabric URL: ${jobDoc.fabricTop || jobDoc.imageA || 'none'}`);
+    console.log(`[fusion] Bottom fabric URL: ${jobDoc.fabricBottom || jobDoc.imageB || 'none'}`);
 
     const candidates: Array<{ url: string; meta?: any }> = [];
 
@@ -215,12 +225,14 @@ export async function processReplaceOutfitJob(jobIdStr: string) {
       regionMaskBase64: string | undefined,
       promptText: string,
       modeTag: string,
-      strength = 0.55
+      strength = 0.55,
+      fabricImageUrl?: string // Add fabric image as reference
     ) {
       // Mask should be base64 PNG where white=area to change (inpainting models vary; check provider)
+      // CRITICAL: init_image = model/mannequin, fabric_image = reference for pattern
       const payload: any = {
-        init_image: initImage,
-        mask: regionMaskBase64, // base64 or url depending on provider
+        init_image: initImage, // Model/mannequin image - the base image we're modifying
+        mask: regionMaskBase64, // base64 or url - white areas will be replaced
         prompt: promptText,
         negative_prompt: negativePrompt,
         parameters: {
@@ -233,6 +245,31 @@ export async function processReplaceOutfitJob(jobIdStr: string) {
           },
         },
       };
+      
+      console.log(`[fusion] Generating ${modeTag} with init_image (model) and fabric reference`);
+      
+      // Add fabric image as reference if available (for IP-Adapter or image conditioning)
+      // Bytez may support IP-Adapter or reference_image parameter
+      if (fabricImageUrl) {
+        // Try multiple parameter names that different providers might use
+        // IP-Adapter (most common for image conditioning)
+        payload.ip_adapter_image = fabricImageUrl;
+        payload.ip_adapter_scale = 0.8; // Control how strongly to follow the reference
+        
+        // Alternative parameter names
+        payload.reference_image = fabricImageUrl;
+        payload.conditioning_image = fabricImageUrl;
+        payload.style_image = fabricImageUrl;
+        
+        // Some models accept it in parameters
+        if (!payload.parameters) payload.parameters = {};
+        payload.parameters.reference_image = fabricImageUrl;
+        payload.parameters.ip_adapter_image = fabricImageUrl;
+        
+        // Log for debugging
+        console.log(`[fusion] Adding fabric reference image: ${fabricImageUrl.substring(0, 50)}...`);
+      }
+      
       // Bytez/your provider might accept controlnet as top-level or inside parameters, adapt as needed.
       const res = await runModelWithRetries(sdModelId, payload, 3);
       // `res.output` might be a base64 or an array; map accordingly
@@ -253,11 +290,15 @@ export async function processReplaceOutfitJob(jobIdStr: string) {
       if (!topMaskBase64) {
         console.warn("[fusion] no top mask available, attempting generation using whole upper-body region heuristics");
       }
+      // Get fabric image URL for top region
+      const topFabricUrl = jobDoc.fabricTop || jobDoc.imageA;
+      
       const topOutput = await generateForRegion(
         topMaskBase64,
         silhouettePrompt,
         "top-silhouette",
-        jobDoc.strength ?? 0.45
+        jobDoc.strength ?? 0.45,
+        topFabricUrl // Pass fabric image as reference
       );
       // topOutput handling: if base64 -> upload to cloudinary
       let topUrl: string | null = null;
@@ -300,11 +341,15 @@ export async function processReplaceOutfitJob(jobIdStr: string) {
     try {
       await updateStatus("processing", 64, { status: "generating_bottom" });
       const bottomPromptToUse = texturePrompt;
+      // Get fabric image URL for bottom region
+      const bottomFabricUrl = jobDoc.fabricBottom || jobDoc.imageB;
+      
       const bottomOutput = await generateForRegion(
         bottomMaskBase64,
         bottomPromptToUse,
         "bottom-texture",
-        jobDoc.strength ?? 0.6
+        jobDoc.strength ?? 0.6,
+        bottomFabricUrl // Pass fabric image as reference
       );
       let bottomUrl: string | null = null;
       if (typeof bottomOutput === "string" && bottomOutput.startsWith("data:image")) {
