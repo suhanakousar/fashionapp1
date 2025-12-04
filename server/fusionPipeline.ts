@@ -116,53 +116,80 @@ async function callHuggingFace(
       
       let transformedUrl: string;
 
-      if (imageBUrl) {
-        // Simple approach: Use Cloudinary fetch URLs to blend images
-        // This works with any image URL (Cloudinary or external)
-        transformedUrl = cloudinary.url(imageUrl, {
-          transformation: [
-            // Base image transformations
-            { 
-              width: 800, 
-              height: 1000, 
-              crop: "fill", 
-              gravity: "center",
-              quality: "auto:best" 
-            },
-            // Overlay Image B
-            { 
-              overlay: imageBUrl.replace(/^https?:\/\//, ''), // Remove protocol for fetch
-              width: Math.round(600 * strength), // Size based on strength
-              height: Math.round(800 * strength),
-              gravity: "center",
-              opacity: Math.round(strength * 100),
-              effect: "multiply"
-            },
-            // Final effects
-            { effect: "vibrance:30" },
-            { effect: "saturation:20" },
-          ],
-        });
+      // Extract public ID from Cloudinary URL
+      // Format: https://res.cloudinary.com/cloudname/image/upload/v1234567890/folder/public_id.jpg
+      const extractPublicId = (url: string): string | null => {
+        try {
+          if (url.includes('cloudinary.com')) {
+            // Extract the path after /upload/
+            const match = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
+            if (match && match[1]) {
+              // Remove file extension
+              return match[1].replace(/\.(jpg|jpeg|png|webp)$/i, '');
+            }
+          }
+          return null;
+        } catch (e) {
+          return null;
+        }
+      };
+
+      const publicIdA = extractPublicId(imageUrl);
+      
+      if (imageBUrl && publicIdA) {
+        const publicIdB = extractPublicId(imageBUrl);
         
-        // Alternative simpler approach if above fails
-        // Just add a visible transformation to show it worked
-        if (!transformedUrl || transformedUrl === imageUrl) {
-          transformedUrl = cloudinary.url(imageUrl, {
+        if (publicIdB) {
+          // Both images are in Cloudinary - use public IDs for overlay
+          transformedUrl = cloudinary.url(publicIdA, {
             transformation: [
               { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
-              { effect: `tint:${Math.round(strength * 100)}:FF6FB1` }, // Pink tint based on strength
-              { effect: "vibrance:40" },
+              { 
+                overlay: publicIdB,
+                width: Math.round(600 * strength),
+                height: Math.round(800 * strength),
+                gravity: "center",
+                opacity: Math.round(strength * 100),
+                effect: "multiply"
+              },
+              { effect: "vibrance:30" },
+              { effect: "saturation:20" },
+            ],
+          });
+        } else {
+          // ImageB is external - use fetch URL
+          transformedUrl = cloudinary.url(publicIdA, {
+            transformation: [
+              { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
+              { 
+                overlay: imageBUrl.replace(/^https?:\/\//, ''),
+                width: Math.round(600 * strength),
+                height: Math.round(800 * strength),
+                gravity: "center",
+                opacity: Math.round(strength * 100),
+                effect: "multiply"
+              },
+              { effect: "vibrance:30" },
             ],
           });
         }
+      } else if (publicIdA) {
+        // Just transform imageA with visible effects
+        transformedUrl = cloudinary.url(publicIdA, {
+          transformation: [
+            { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
+            { effect: `tint:${Math.round(strength * 60)}:FF6FB1` }, // Visible pink tint
+            { effect: "vibrance:40" },
+            { effect: "saturation:25" },
+          ],
+        });
       } else {
-        // Fallback: just transform imageA with visible effects
+        // ImageA is external - use fetch URL
         transformedUrl = cloudinary.url(imageUrl, {
           transformation: [
             { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
-            { effect: `tint:${Math.round(strength * 50)}:FF6FB1` }, // Visible pink tint
-            { effect: "vibrance:30" },
-            { effect: "saturation:20" },
+            { effect: `tint:${Math.round(strength * 60)}:FF6FB1` },
+            { effect: "vibrance:40" },
           ],
         });
       }
