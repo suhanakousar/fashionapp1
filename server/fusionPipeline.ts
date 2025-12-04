@@ -106,70 +106,98 @@ async function callHuggingFace(
   if (USE_MOCK) {
     // Return mock result for development - use Cloudinary to blend both images
     console.log("Using mock HuggingFace response - creating fused image from both inputs");
+    console.log("Image A:", imageUrl);
+    console.log("Image B:", imageBUrl);
+    
     try {
-      // Extract public IDs from URLs
-      const getPublicId = (url: string) => {
-        const parts = url.split('/');
-        const filename = parts[parts.length - 1];
-        return filename.split('.')[0];
-      };
-
-      const publicIdA = getPublicId(imageUrl);
+      // For Cloudinary, we need to use the full URL or public ID
+      // If images are already in Cloudinary, extract public ID
+      // Otherwise, use fetch URL transformation
+      
       let transformedUrl: string;
 
       if (imageBUrl) {
-        // Blend both images using Cloudinary
-        const publicIdB = getPublicId(imageBUrl);
-        transformedUrl = cloudinary.url(publicIdA, {
-          transformation: [
-            {
-              width: 800,
-              height: 1000,
-              crop: "fill",
-              gravity: "center",
-              quality: "auto:best",
-            },
-            {
-              overlay: publicIdB,
-              width: 0.5, // 50% blend
-              height: 0.5,
-              gravity: "center",
-              opacity: Math.round(strength * 100), // Use strength for blend opacity
-              effect: "multiply", // Blend mode
-            },
-            {
-              effect: "art:audrey", // Artistic effect
-              quality: "auto:best",
-            },
-            {
-              overlay: {
-                text: "FUSION",
-                font_family: "Arial",
-                font_size: 40,
-                font_weight: "bold",
+        // Use Cloudinary URL transformation with both images
+        // Method 1: Use fetch URLs if images are external
+        const isCloudinaryUrl = (url: string) => url.includes('cloudinary.com');
+        
+        if (isCloudinaryUrl(imageUrl) && isCloudinaryUrl(imageBUrl)) {
+          // Both are Cloudinary URLs - extract public IDs
+          const extractPublicId = (url: string) => {
+            const match = url.match(/\/v\d+\/(.+)\.(jpg|png|jpeg|webp)/);
+            return match ? match[1] : null;
+          };
+          
+          const publicIdA = extractPublicId(imageUrl);
+          const publicIdB = extractPublicId(imageBUrl);
+          
+          if (publicIdA && publicIdB) {
+            transformedUrl = cloudinary.url(publicIdA, {
+              transformation: [
+                { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
+                { 
+                  overlay: publicIdB,
+                  width: 0.6,
+                  height: 0.6,
+                  gravity: "center",
+                  opacity: Math.round(strength * 100),
+                  effect: "multiply"
+                },
+                { effect: "art:audrey", quality: "auto:best" },
+              ],
+            });
+          } else {
+            // Fallback: use fetch URLs
+            transformedUrl = cloudinary.url(imageUrl, {
+              transformation: [
+                { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
+                { 
+                  overlay: imageBUrl,
+                  width: 0.6,
+                  height: 0.6,
+                  gravity: "center",
+                  opacity: Math.round(strength * 100),
+                  effect: "multiply"
+                },
+                { effect: "art:audrey", quality: "auto:best" },
+              ],
+            });
+          }
+        } else {
+          // Use fetch URLs for external images
+          transformedUrl = cloudinary.url(imageUrl, {
+            transformation: [
+              { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
+              { 
+                overlay: imageBUrl,
+                width: 0.6,
+                height: 0.6,
+                gravity: "center",
+                opacity: Math.round(strength * 100),
+                effect: "multiply"
               },
-              gravity: "south_east",
-              color: "#FF6FB1",
-              opacity: 20,
-            },
-          ],
-        });
+              { effect: "art:audrey", quality: "auto:best" },
+            ],
+          });
+        }
       } else {
-        // Fallback: just transform imageA
-        transformedUrl = cloudinary.url(publicIdA, {
+        // Fallback: just transform imageA with effects
+        transformedUrl = cloudinary.url(imageUrl, {
           transformation: [
-            {
-              effect: "art:audrey",
-              quality: "auto:best",
-            },
+            { width: 800, height: 1000, crop: "fill", quality: "auto:best" },
+            { effect: "art:audrey", quality: "auto:best" },
+            { effect: "vibrance:20" },
           ],
         });
       }
+      
+      console.log("Generated transformed URL:", transformedUrl);
       return transformedUrl;
     } catch (error) {
       console.error("Mock transformation error:", error);
-      // Fallback: add a query param to make it look different
-      return `${imageUrl}?t=${Date.now()}&fusion=mock`;
+      // Fallback: return imageA with timestamp to show it's different
+      const separator = imageUrl.includes('?') ? '&' : '?';
+      return `${imageUrl}${separator}t=${Date.now()}&fusion=mock&strength=${strength}`;
     }
   }
 
