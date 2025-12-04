@@ -168,12 +168,39 @@ async function callHuggingFace(
       }
       
       console.log("Generated transformed URL:", transformedUrl);
+      
+      // Validate the URL was actually transformed
+      if (!transformedUrl || transformedUrl === imageUrl) {
+        console.warn("Transformation didn't change URL, using fallback");
+        // Create a definitely different URL with Cloudinary effects
+        transformedUrl = cloudinary.url(imageUrl, {
+          transformation: [
+            { width: 800, height: 1000, crop: "fill" },
+            { effect: `tint:${Math.round(strength * 80)}:FF6FB1` },
+            { effect: "vibrance:50" },
+            { quality: "auto:best" },
+          ],
+        });
+      }
+      
       return transformedUrl;
     } catch (error) {
       console.error("Mock transformation error:", error);
-      // Fallback: return imageA with timestamp to show it's different
-      const separator = imageUrl.includes('?') ? '&' : '?';
-      return `${imageUrl}${separator}t=${Date.now()}&fusion=mock&strength=${strength}`;
+      // Last resort fallback: create a simple transformed URL
+      try {
+        const fallbackUrl = cloudinary.url(imageUrl, {
+          transformation: [
+            { effect: `tint:50:FF6FB1` },
+            { quality: "auto:best" },
+          ],
+        });
+        return fallbackUrl;
+      } catch (fallbackError) {
+        console.error("Fallback transformation also failed:", fallbackError);
+        // Ultimate fallback: return imageA with query params
+        const separator = imageUrl.includes('?') ? '&' : '?';
+        return `${imageUrl}${separator}t=${Date.now()}&fusion=mock&strength=${strength}`;
+      }
     }
   }
 
