@@ -30,12 +30,24 @@ export const api = {
   },
   post: async (url: string, data?: unknown, options?: RequestInit) => {
     const apiUrl = getApiUrl(url);
+    
+    // For FormData, don't set Content-Type - browser will set it with boundary
+    const isFormData = data instanceof FormData;
+    const headers: HeadersInit = isFormData 
+      ? {} // Let browser set Content-Type with boundary for FormData
+      : (options?.headers || { "Content-Type": "application/json" });
+    
+    // Merge any additional headers from options
+    if (options?.headers && !isFormData) {
+      Object.assign(headers, options.headers);
+    }
+    
     const res = await fetch(apiUrl, {
       method: "POST",
-      headers: options?.headers || (data instanceof FormData ? {} : { "Content-Type": "application/json" }),
-      body: data instanceof FormData ? data : (data ? JSON.stringify(data) : undefined),
+      headers,
+      body: isFormData ? data : (data ? JSON.stringify(data) : undefined),
       credentials: "include",
-      ...options,
+      ...(isFormData ? {} : options), // Don't spread options for FormData to avoid header conflicts
     });
     if (!res.ok) {
       const error = await res.json().catch(() => ({ message: res.statusText }));

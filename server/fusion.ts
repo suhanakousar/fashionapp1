@@ -27,15 +27,29 @@ if (!cloudinary.config().cloud_name) {
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  limits: { 
+    fileSize: 10 * 1024 * 1024, // 10MB
+    files: 2 // Allow up to 2 files
+  },
   fileFilter: (req, file, cb) => {
-    const allowedTypes = /jpeg|jpg|png|webp/;
-    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-    const mimetype = allowedTypes.test(file.mimetype);
-    if (mimetype && extname) {
+    // More lenient file type checking
+    const allowedTypes = /jpeg|jpg|png|webp/i;
+    const extname = file.originalname ? allowedTypes.test(path.extname(file.originalname).toLowerCase()) : false;
+    const mimetype = file.mimetype ? allowedTypes.test(file.mimetype.toLowerCase()) : false;
+    
+    // Accept if either extension or mimetype matches
+    if (extname || mimetype) {
       return cb(null, true);
     }
-    cb(new Error("Only image files (PNG, JPG, JPEG, WEBP) are allowed"));
+    
+    // Log for debugging
+    console.warn("File rejected:", {
+      originalname: file.originalname,
+      mimetype: file.mimetype,
+      extname: path.extname(file.originalname || "").toLowerCase()
+    });
+    
+    cb(new Error(`Only image files (PNG, JPG, JPEG, WEBP) are allowed. Got: ${file.mimetype || "unknown"}`));
   },
 });
 
@@ -44,15 +58,35 @@ export async function validateUpload(file: Express.Multer.File): Promise<{
   valid: boolean;
   error?: string;
 }> {
-  // Check file type
-  const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
-  if (!allowedTypes.includes(file.mimetype)) {
-    return { valid: false, error: "Invalid file type. Only PNG, JPG, JPEG, WEBP allowed." };
+  // Check if file exists
+  if (!file) {
+    return { valid: false, error: "File is missing" };
+  }
+
+  // Check file type - be more lenient with MIME types
+  const allowedMimeTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp", "image/x-png"];
+  const allowedExtensions = [".png", ".jpg", ".jpeg", ".webp"];
+  
+  const hasValidMimeType = allowedMimeTypes.includes(file.mimetype?.toLowerCase() || "");
+  const hasValidExtension = allowedExtensions.some(ext => 
+    file.originalname?.toLowerCase().endsWith(ext)
+  );
+  
+  if (!hasValidMimeType && !hasValidExtension) {
+    return { 
+      valid: false, 
+      error: `Invalid file type: ${file.mimetype || "unknown"}. Only PNG, JPG, JPEG, WEBP allowed.` 
+    };
   }
 
   // Check file size (10MB max)
   if (file.size > 10 * 1024 * 1024) {
-    return { valid: false, error: "File size exceeds 10MB limit." };
+    return { valid: false, error: `File size (${(file.size / 1024 / 1024).toFixed(2)}MB) exceeds 10MB limit.` };
+  }
+
+  // Check minimum file size (at least 1KB)
+  if (file.size < 1024) {
+    return { valid: false, error: "File is too small. Minimum size is 1KB." };
   }
 
   // TODO: Check dimensions (min 512x512, max 2048x2048)
@@ -147,16 +181,22 @@ export function setupFusionRoutes(app: express.Express) {
       upload.array("images", 2)(req, res, (err: any) => {
         if (err) {
           console.error("Multer error:", err);
+          console.error("Multer error code:", err.code);
+          console.error("Multer error message:", err.message);
+          
           if (err.code === "LIMIT_FILE_SIZE") {
-            return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
+            return res.status(400).json({ error: "File too large. Maximum size is 10MB per file." });
           }
           if (err.code === "LIMIT_FILE_COUNT") {
             return res.status(400).json({ error: "Too many files. Maximum is 2 files." });
           }
+          if (err.code === "LIMIT_UNEXPECTED_FILE") {
+            return res.status(400).json({ error: "Unexpected file field. Use 'images' field name." });
+          }
           if (err.message) {
             return res.status(400).json({ error: err.message });
           }
-          return res.status(400).json({ error: "File upload error" });
+          return res.status(400).json({ error: "File upload error", code: err.code });
         }
         next();
       });
@@ -164,10 +204,24 @@ export function setupFusionRoutes(app: express.Express) {
     async (req: Request, res: Response) => {
       try {
         console.log("Upload request received");
-        console.log("Files:", req.files ? (Array.isArray(req.files) ? req.files.length : "not array") : "none");
+        console.log("Content-Type:", req.headers["content-type"]);
+        console.log("Files:", req.files ? (Array.isArray(req.files) ? `${req.files.length} files` : typeof req.files) : "none");
         
-        if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
-          return res.status(400).json({ error: "No files uploaded" });
+        // Check if files were parsed
+        if (!req.files) {
+          return res.status(400).json({ 
+            error: "No files in request. Make sure to use 'images' as the field name and Content-Type: multipart/form-data" 
+          });
+        }
+        
+        if (!Array.isArray(req.files)) {
+          return res.status(400).json({ 
+            error: "Invalid file format. Expected array of files." 
+          });
+        }
+        
+        if (req.files.length === 0) {
+          return res.status(400).json({ error: "No files uploaded. Please select at least one image." });
         }
 
         const files = req.files as Express.Multer.File[];
@@ -176,11 +230,19 @@ export function setupFusionRoutes(app: express.Express) {
         // Validate each file
         for (let i = 0; i < files.length; i++) {
           const file = files[i];
-          console.log(`Validating file ${i + 1}: ${file.originalname}, type: ${file.mimetype}, size: ${file.size}`);
+          console.log(`Validating file ${i + 1}:`, {
+            name: file.originalname,
+            type: file.mimetype,
+            size: file.size,
+            hasBuffer: !!file.buffer,
+            bufferLength: file.buffer?.length || 0
+          });
           
           const validation = await validateUpload(file);
           if (!validation.valid) {
-            return res.status(400).json({ error: validation.error });
+            return res.status(400).json({ 
+              error: `File ${i + 1} (${file.originalname}): ${validation.error}` 
+            });
           }
         }
 

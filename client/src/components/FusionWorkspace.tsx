@@ -63,19 +63,38 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
     mutationFn: async (files: File[]) => {
       const formData = new FormData();
       files.forEach((file) => formData.append("images", file));
-      const response = await api.post("/api/fusion/upload", formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
-      return response.data;
+      // Don't set Content-Type header - browser will set it with boundary automatically
+      const response = await api.post("/api/fusion/upload", formData);
+      return response;
     },
     onSuccess: (data) => {
-      if (data.images && data.images.length >= 2) {
-        setImageA(data.images[0].url);
-        setImageB(data.images[1].url);
-        toast({
-          title: "Images uploaded successfully",
-          description: "Ready to create fusion",
-        });
+      console.log("Upload response:", data);
+      if (data.images && data.images.length > 0) {
+        // If we have one image and imageA is not set, set imageA
+        if (!imageA && data.images.length >= 1) {
+          setImageA(data.images[0].url);
+          toast({
+            title: "First image uploaded",
+            description: "Upload the second image to continue",
+          });
+        }
+        // If we have two images, set both
+        else if (data.images.length >= 2) {
+          setImageA(data.images[0].url);
+          setImageB(data.images[1].url);
+          toast({
+            title: "Images uploaded successfully",
+            description: "Ready to create fusion",
+          });
+        }
+        // If imageA is set and we get a new image, set it as imageB
+        else if (imageA && data.images.length >= 1) {
+          setImageB(data.images[0].url);
+          toast({
+            title: "Second image uploaded",
+            description: "Ready to create fusion",
+          });
+        }
       }
     },
     onError: (error: any) => {
