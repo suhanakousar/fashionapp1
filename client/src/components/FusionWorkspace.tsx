@@ -485,8 +485,16 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
               <CardTitle className="text-sm font-medium">Try on Mannequin</CardTitle>
             </CardHeader>
             <CardContent>
-              {currentJob?.resultUrl ? (
-                <MannequinCanvas imageUrl={currentJob.resultUrl} />
+              {currentJob?.status === "completed" && currentJob?.resultUrl ? (
+                <MannequinCanvas 
+                  imageUrl={currentJob.resultUrl} 
+                  mannequinUrl="https://images.unsplash.com/photo-1558769132-cb1aea458c5e?w=400&h=600&fit=crop&q=80"
+                />
+              ) : currentJob?.status === "processing" ? (
+                <div className="aspect-[3/4] rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground">
+                  <Loader2 className="h-12 w-12 mb-4 opacity-50 animate-spin" />
+                  <p className="text-sm">Processing fusion...</p>
+                </div>
               ) : (
                 <div className="aspect-[3/4] rounded-lg border-2 border-dashed border-border flex items-center justify-center text-muted-foreground">
                   <p className="text-sm text-center px-4">
