@@ -142,48 +142,65 @@ export function setupFusionRoutes(app: express.Express) {
   // Upload images
   app.post(
     "/api/fusion/upload",
-    upload.array("images", 2),
+    (req: Request, res: Response, next: express.NextFunction) => {
+      // Handle multer errors
+      upload.array("images", 2)(req, res, (err: any) => {
+        if (err) {
+          console.error("Multer error:", err);
+          if (err.code === "LIMIT_FILE_SIZE") {
+            return res.status(400).json({ error: "File too large. Maximum size is 10MB." });
+          }
+          if (err.code === "LIMIT_FILE_COUNT") {
+            return res.status(400).json({ error: "Too many files. Maximum is 2 files." });
+          }
+          if (err.message) {
+            return res.status(400).json({ error: err.message });
+          }
+          return res.status(400).json({ error: "File upload error" });
+        }
+        next();
+      });
+    },
     async (req: Request, res: Response) => {
       try {
+        console.log("Upload request received");
+        console.log("Files:", req.files ? (Array.isArray(req.files) ? req.files.length : "not array") : "none");
+        
         if (!req.files || !Array.isArray(req.files) || req.files.length === 0) {
           return res.status(400).json({ error: "No files uploaded" });
         }
 
         const files = req.files as Express.Multer.File[];
+        console.log(`Processing ${files.length} files`);
         
         // Validate each file
-        for (const file of files) {
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          console.log(`Validating file ${i + 1}: ${file.originalname}, type: ${file.mimetype}, size: ${file.size}`);
+          
           const validation = await validateUpload(file);
           if (!validation.valid) {
             return res.status(400).json({ error: validation.error });
           }
         }
 
-        // REVIEW REQUIRED: Face detection
-        // const facesDetected = await detectFaces(files);
-        // if (facesDetected && !req.body.consent) {
-        //   return res.status(400).json({ 
-        //     error: "Faces detected. Please provide consent for face masking." 
-        //   });
-        // }
+        // Upload to Cloudinary
+        console.log(`Uploading ${files.length} files to Cloudinary...`);
+        const urls = await uploadImages(files);
+        console.log("Upload successful, URLs:", urls);
 
-      // Upload to Cloudinary
-      console.log(`Uploading ${files.length} files to Cloudinary...`);
-      const urls = await uploadImages(files);
-      console.log("Upload successful, URLs:", urls);
-
-      res.json({
-        success: true,
-        images: urls.map((url) => ({ url })),
-      });
-    } catch (error: any) {
-      console.error("Upload error:", error);
-      console.error("Error stack:", error.stack);
-      res.status(500).json({ 
-        error: error.message || "Upload failed",
-        details: process.env.NODE_ENV === "development" ? error.stack : undefined
-      });
-    }
+        res.json({
+          success: true,
+          images: urls.map((url) => ({ url })),
+        });
+      } catch (error: any) {
+        console.error("Upload error:", error);
+        console.error("Error stack:", error.stack);
+        res.status(500).json({ 
+          error: error.message || "Upload failed",
+          details: process.env.NODE_ENV === "development" ? error.stack : undefined
+        });
+      }
     }
   );
 
