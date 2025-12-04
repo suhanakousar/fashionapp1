@@ -182,8 +182,9 @@ export async function createFusionJob(
   });
 
   // Start processing in background (non-blocking)
-  import("./fusionPipeline.js").then(({ processFusionJob }) => {
-    processFusionJob(jobId).catch((error) => {
+  // Use the new pipeline that matches the notebook approach
+  import("./fusionPipelineNew.js").then(({ processReplaceOutfitJob }) => {
+    processReplaceOutfitJob(jobId).catch((error) => {
       console.error("Background fusion processing error:", error);
     });
   });

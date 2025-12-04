@@ -46,11 +46,22 @@ export async function processReplaceOutfitJob(jobIdStr: string) {
     await updateStatus("processing", 3);
     console.log(`[fusion] Starting job ${jobIdStr}`);
 
-    // Get model image (use referenceModel or fabricTop as fallback)
-    const modelImageUrl = jobDoc.referenceModel || jobDoc.fabricTop || jobDoc.imageA;
+    // Get model image - CRITICAL: referenceModel should be the mannequin/model image
+    // fabricTop/fabricBottom are the fabric samples to apply
+    const modelImageUrl = jobDoc.referenceModel || jobDoc.imageA;
     if (!modelImageUrl) {
-      throw new Error("No model image provided");
+      throw new Error("No model/mannequin image provided. Please upload a Reference Model image.");
     }
+    
+    // Validate we have at least one fabric to apply
+    const hasFabric = !!(jobDoc.fabricTop || jobDoc.fabricBottom || jobDoc.imageB);
+    if (!hasFabric) {
+      throw new Error("No fabric images provided. Please upload at least one fabric image (Top or Bottom).");
+    }
+    
+    console.log(`[fusion] Model image (mannequin): ${modelImageUrl.substring(0, 80)}...`);
+    console.log(`[fusion] Top fabric: ${jobDoc.fabricTop || jobDoc.imageA || 'none'}`);
+    console.log(`[fusion] Bottom fabric: ${jobDoc.fabricBottom || jobDoc.imageB || 'none'}`);
 
     // 1) Face detection (protect identity) -------------------------
     // REVIEW REQUIRED: Face protection logic must be verified for legal/privacy compliance.
