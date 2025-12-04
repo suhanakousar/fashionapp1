@@ -2,8 +2,8 @@
 import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Sparkles } from "lucide-react";
-import { motion, useScroll, useTransform } from "framer-motion";
+import { ChevronLeft, ChevronRight, Sparkles, ArrowRight } from "lucide-react";
+import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
 
 interface BeforeAfterPair {
   before: string;
@@ -20,23 +20,23 @@ interface HeroProps {
   ctaLink?: string;
 }
 
-// Sample data for demo
+// Better sample data with actual fashion images
 const defaultPairs: BeforeAfterPair[] = [
   {
-    before: "/api/placeholder/800/600?text=Traditional+Saree",
-    after: "/api/placeholder/800/600?text=Fused+Design",
+    before: "https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=800&h=1000&fit=crop&q=80",
+    after: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=800&h=1000&fit=crop&q=80",
     title: "Classic Meets Gothic",
-    description: "Traditional red saree fused with Victorian patterns",
+    description: "Traditional elegance fused with Victorian patterns",
   },
   {
-    before: "/api/placeholder/800/600?text=Plain+Lehenga",
-    after: "/api/placeholder/800/600?text=Embroidered+Fusion",
+    before: "https://images.unsplash.com/photo-1539008835657-9e8e9680c956?w=800&h=1000&fit=crop&q=80",
+    after: "https://images.unsplash.com/photo-1595777457583-95e059d581b8?w=800&h=1000&fit=crop&q=80",
     title: "Pattern Fusion",
-    description: "Simple lehenga enhanced with intricate paisley motifs",
+    description: "Simple designs enhanced with intricate motifs",
   },
   {
-    before: "/api/placeholder/800/600?text=Basic+Salwar",
-    after: "/api/placeholder/800/600?text=Kiroween+Style",
+    before: "https://images.unsplash.com/photo-1566479179817-4d448f472137?w=800&h=1000&fit=crop&q=80",
+    after: "https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=800&h=1000&fit=crop&q=80",
     title: "Spooky Elegance",
     description: "Everyday wear transformed with gothic accents",
   },
@@ -44,8 +44,8 @@ const defaultPairs: BeforeAfterPair[] = [
 
 export function Hero({
   beforeAfterPairs = defaultPairs,
-  headline = "Stitch the Impossible — Create couture fusions in seconds.",
-  subheadline = "Frankenstein Fusion Outfit Designer: Where traditional meets gothic, powered by AI.",
+  headline = "Stitch the Impossible",
+  subheadline = "Create couture fusions in seconds with AI-powered design",
   ctaText = "Try FrankenStitch",
   ctaLink = "/fusion",
 }: HeroProps) {
@@ -58,7 +58,7 @@ export function Hero({
   });
 
   const opacity = useTransform(scrollYProgress, [0, 0.5], [1, 0]);
-  const y = useTransform(scrollYProgress, [0, 0.5], [0, -100]);
+  const y = useTransform(scrollYProgress, [0, 0.5], [0, -50]);
 
   // Autoplay carousel
   useEffect(() => {
@@ -87,206 +87,257 @@ export function Hero({
     <motion.section
       ref={containerRef}
       style={{ opacity, y }}
-      className="relative h-[85vh] min-h-[600px] flex items-center justify-center overflow-hidden kiro-fog kiro-vignette"
+      className="relative min-h-screen flex items-center justify-center overflow-hidden bg-gradient-to-br from-background via-background to-primary/5"
       aria-label="Hero section with before and after fashion fusion examples"
     >
-      {/* Background gradient with fog */}
-      <div className="absolute inset-0 kiro-gradient opacity-20" />
-      <div className="absolute inset-0 bg-[var(--bg-900)]" />
-      
-      {/* Animated fog overlay */}
-      <div className="absolute inset-0 kiro-fog pointer-events-none" />
+      {/* Subtle background pattern */}
+      <div className="absolute inset-0 opacity-[0.02]">
+        <div className="absolute inset-0" style={{
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
+        }} />
+      </div>
 
-      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full">
-        {/* Headline */}
-        <div className="text-center mb-12">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-            className="font-serif text-4xl md:text-6xl lg:text-7xl font-bold tracking-tight mb-6 bg-gradient-to-r from-[var(--accent-gradient-start)] to-[var(--accent-gradient-end)] bg-clip-text text-transparent"
-          >
-            {headline}
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8"
-          >
-            {subheadline}
-          </motion.p>
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 w-full py-20">
+        <div className="grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left: Text Content */}
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.4 }}
+            initial={{ opacity: 0, x: -30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6 }}
+            className="space-y-8"
           >
-            <Link href={ctaLink}>
-              <Button
-                size="lg"
-                className="text-base kiro-glow hover:scale-105 transition-transform motion-regular"
-                aria-label={ctaText}
+            <div className="space-y-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.1 }}
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/20"
               >
-                <Sparkles className="mr-2 h-5 w-5" />
-                {ctaText}
-              </Button>
-            </Link>
-          </motion.div>
-        </div>
-
-        {/* Before/After Carousel */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.6 }}
-          className="max-w-6xl mx-auto"
-        >
-          <div className="relative bg-card/50 backdrop-blur-sm rounded-lg border border-border/50 p-6 md:p-8 kiro-glow">
-            {/* Carousel Controls */}
-            <button
-              onClick={prevSlide}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  prevSlide();
-                }
-              }}
-              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-background/80 hover:bg-background rounded-full p-2 border border-border kiro-glow transition-all motion-fast focus:outline-none focus:ring-2 focus:ring-[var(--neon-stitch)] focus:ring-offset-2"
-              aria-label="Previous transformation"
-              aria-controls="hero-carousel"
-            >
-              <ChevronLeft className="h-6 w-6" />
-            </button>
-            <button
-              onClick={nextSlide}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  nextSlide();
-                }
-              }}
-              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-background/80 hover:bg-background rounded-full p-2 border border-border kiro-glow transition-all motion-fast focus:outline-none focus:ring-2 focus:ring-[var(--neon-stitch)] focus:ring-offset-2"
-              aria-label="Next transformation"
-              aria-controls="hero-carousel"
-            >
-              <ChevronRight className="h-6 w-6" />
-            </button>
-
-        {/* Before/After Comparison */}
-        <div id="hero-carousel" className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8" role="region" aria-label="Fashion transformation examples">
-              {/* Before */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-1 w-12 bg-muted-foreground/30 rounded" />
-                  <span className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                    Before
-                  </span>
-                </div>
-                <div className="relative aspect-[4/5] rounded-lg overflow-hidden border-2 border-border/50 kiro-vignette">
-                  <img
-                    src={currentPair.before}
-                    alt={`Before: ${currentPair.title}`}
-                    className="w-full h-full object-cover"
-                    loading="eager"
-                  />
-                </div>
-              </div>
-
-              {/* Arrow */}
-              <div className="hidden md:flex items-center justify-center">
-                <motion.div
-                  animate={{ x: [0, 10, 0] }}
-                  transition={{ duration: 2, repeat: Infinity }}
-                  className="text-[var(--neon-stitch)]"
-                >
-                  <svg
-                    className="h-12 w-12"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M13 7l5 5m0 0l-5 5m5-5H6"
-                    />
-                  </svg>
-                </motion.div>
-              </div>
-
-              {/* After */}
-              <div className="space-y-3">
-                <div className="flex items-center gap-2">
-                  <div className="h-1 w-12 bg-[var(--neon-stitch)] rounded kiro-glow" />
-                  <span className="text-sm font-medium text-[var(--neon-stitch)] uppercase tracking-wider">
-                    After
-                  </span>
-                </div>
-                <motion.div
-                  key={currentIndex}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="relative aspect-[4/5] rounded-lg overflow-hidden border-2 border-[var(--neon-stitch)]/50 kiro-glow kiro-vignette"
-                >
-                  <img
-                    src={currentPair.after}
-                    alt={`After: ${currentPair.title}`}
-                    className="w-full h-full object-cover"
-                    loading="eager"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[var(--bg-900)]/60 to-transparent" />
-                </motion.div>
-              </div>
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span className="text-sm font-medium text-primary">AI-Powered Design</span>
+              </motion.div>
+              
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+                className="font-serif text-5xl md:text-6xl lg:text-7xl font-bold leading-tight"
+              >
+                <span className="bg-gradient-to-r from-foreground via-foreground to-foreground/70 bg-clip-text text-transparent">
+                  {headline}
+                </span>
+              </motion.h1>
+              
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, delay: 0.3 }}
+                className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-xl"
+              >
+                {subheadline}
+              </motion.p>
             </div>
 
-            {/* Carousel Info */}
-            <div className="mt-6 text-center">
-              <h3 className="font-serif text-xl md:text-2xl font-semibold mb-2">
-                {currentPair.title}
-              </h3>
-              <p className="text-sm text-muted-foreground">{currentPair.description}</p>
-              
-              {/* Dots indicator */}
-              <div className="flex justify-center gap-2 mt-4">
-                {beforeAfterPairs.map((_, idx) => (
-                  <button
-                    key={idx}
-                    onClick={() => {
-                      setCurrentIndex(idx);
-                      setIsAutoplay(false);
-                      setTimeout(() => setIsAutoplay(true), 10000);
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" || e.key === " ") {
-                        e.preventDefault();
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.4 }}
+              className="flex flex-col sm:flex-row gap-4"
+            >
+              <Link href={ctaLink}>
+                <Button
+                  size="lg"
+                  className="text-base px-8 py-6 h-auto group"
+                  aria-label={ctaText}
+                >
+                  {ctaText}
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform" />
+                </Button>
+              </Link>
+              <Link href="/#gallery">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="text-base px-8 py-6 h-auto"
+                >
+                  View Gallery
+                </Button>
+              </Link>
+            </motion.div>
+
+            {/* Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.5 }}
+              className="grid grid-cols-3 gap-6 pt-8 border-t border-border"
+            >
+              <div>
+                <div className="text-2xl font-bold">1000+</div>
+                <div className="text-sm text-muted-foreground">Fusions Created</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">AI</div>
+                <div className="text-sm text-muted-foreground">Powered</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold">5s</div>
+                <div className="text-sm text-muted-foreground">Avg. Time</div>
+              </div>
+            </motion.div>
+          </motion.div>
+
+          {/* Right: Before/After Carousel */}
+          <motion.div
+            initial={{ opacity: 0, x: 30 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            className="relative"
+          >
+            <div className="relative bg-card rounded-2xl border border-border/50 p-6 shadow-2xl">
+              {/* Carousel Controls */}
+              <button
+                onClick={prevSlide}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    prevSlide();
+                  }
+                }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-background/95 hover:bg-background rounded-full p-3 border border-border shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label="Previous transformation"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <button
+                onClick={nextSlide}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    nextSlide();
+                  }
+                }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-background/95 hover:bg-background rounded-full p-3 border border-border shadow-lg transition-all focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                aria-label="Next transformation"
+              >
+                <ChevronRight className="h-5 w-5" />
+              </button>
+
+              {/* Before/After Comparison */}
+              <div className="grid grid-cols-2 gap-4">
+                {/* Before */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`before-${currentIndex}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: 20 }}
+                    transition={{ duration: 0.4 }}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-0.5 w-8 bg-muted-foreground/40 rounded" />
+                      <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                        Before
+                      </span>
+                    </div>
+                    <div className="relative aspect-[3/4] rounded-lg overflow-hidden border border-border/50 bg-muted">
+                      <img
+                        src={currentPair.before}
+                        alt={`Before: ${currentPair.title}`}
+                        className="w-full h-full object-cover"
+                        loading="eager"
+                      />
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* After */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={`after-${currentIndex}`}
+                    initial={{ opacity: 0, x: 20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -20 }}
+                    transition={{ duration: 0.4 }}
+                    className="space-y-2"
+                  >
+                    <div className="flex items-center gap-2">
+                      <div className="h-0.5 w-8 bg-primary rounded" />
+                      <span className="text-xs font-medium text-primary uppercase tracking-wider">
+                        After
+                      </span>
+                    </div>
+                    <div className="relative aspect-[3/4] rounded-lg overflow-hidden border-2 border-primary/50 shadow-lg">
+                      <img
+                        src={currentPair.after}
+                        alt={`After: ${currentPair.title}`}
+                        className="w-full h-full object-cover"
+                        loading="eager"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-primary/10 to-transparent pointer-events-none" />
+                    </div>
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+
+              {/* Carousel Info */}
+              <div className="mt-6 text-center space-y-3">
+                <h3 className="font-serif text-xl font-semibold">
+                  {currentPair.title}
+                </h3>
+                <p className="text-sm text-muted-foreground">{currentPair.description}</p>
+                
+                {/* Dots indicator */}
+                <div className="flex justify-center gap-2 mt-4">
+                  {beforeAfterPairs.map((_, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => {
                         setCurrentIndex(idx);
                         setIsAutoplay(false);
                         setTimeout(() => setIsAutoplay(true), 10000);
-                      }
-                    }}
-                    className={`h-2 rounded-full transition-all motion-fast focus:outline-none focus:ring-2 focus:ring-[var(--neon-stitch)] focus:ring-offset-2 ${
-                      idx === currentIndex
-                        ? "w-8 bg-[var(--neon-stitch)] kiro-glow"
-                        : "w-2 bg-muted-foreground/30"
-                    }`}
-                    aria-label={`Go to slide ${idx + 1} of ${beforeAfterPairs.length}`}
-                    aria-current={idx === currentIndex ? "true" : "false"}
-                    role="tab"
-                  />
-                ))}
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          setCurrentIndex(idx);
+                          setIsAutoplay(false);
+                          setTimeout(() => setIsAutoplay(true), 10000);
+                        }
+                      }}
+                      className={`h-2 rounded-full transition-all ${
+                        idx === currentIndex
+                          ? "w-8 bg-primary"
+                          : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                      }`}
+                      aria-label={`Go to slide ${idx + 1} of ${beforeAfterPairs.length}`}
+                      aria-current={idx === currentIndex ? "true" : "false"}
+                    />
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </motion.div>
+          </motion.div>
+        </div>
       </div>
 
       {/* Scroll indicator */}
-      <div className="absolute bottom-8 left-1/2 -translate-x-1/2 animate-bounce">
-        <ChevronLeft className="h-6 w-6 text-muted-foreground rotate-90" />
-      </div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 1 }}
+        className="absolute bottom-8 left-1/2 -translate-x-1/2"
+      >
+        <motion.div
+          animate={{ y: [0, 10, 0] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="flex flex-col items-center gap-2 text-muted-foreground"
+        >
+          <span className="text-xs uppercase tracking-wider">Scroll</span>
+          <ChevronLeft className="h-4 w-4 rotate-90" />
+        </motion.div>
+      </motion.div>
     </motion.section>
   );
 }
-
