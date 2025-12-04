@@ -119,9 +119,11 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
       return response;
     },
     onSuccess: (response) => {
-      // Handle both { data: {...} } and direct response formats
-      const data = response?.data || response;
+      // API.post returns the JSON directly, so response is the result object
+      const data = response;
       const jobId = data?.jobId || data?.id;
+      
+      console.log("Fusion job created, response:", response);
       
       if (!jobId) {
         console.error("Invalid response from server:", response);
@@ -156,13 +158,21 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
     const interval = setInterval(async () => {
       try {
         const response = await api.get(`/api/fusion/status/${jobId}`);
-        const job = response.data;
+        // API.get returns the JSON directly, so response is the job object
+        const job = response;
+        console.log("Polling job status:", job);
+        
+        if (!job) {
+          console.error("No job data received");
+          return;
+        }
+        
         setCurrentJob({
           jobId: job.jobId || jobId,
           status: job.status,
-          progress: job.progress,
+          progress: job.progress || 0,
           resultUrl: job.resultUrl,
-          candidates: job.candidates,
+          candidates: job.candidates || [],
           explainability: job.explainability,
         });
 
@@ -172,7 +182,9 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
             // Fetch full results
             try {
               const resultsResponse = await api.get(`/api/fusion/results/${jobId}`);
-              const results = resultsResponse.data || resultsResponse;
+              // API.get returns the JSON directly, so resultsResponse is the results object
+              const results = resultsResponse;
+              console.log("Fusion results:", results);
               setCurrentJob({
                 jobId: results.jobId || jobId,
                 status: results.status || "completed",
@@ -447,6 +459,13 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
                       className="w-full h-full object-cover"
                       loading="lazy"
                       decoding="async"
+                      onError={(e) => {
+                        console.error("Failed to load fusion result image:", currentJob.resultUrl);
+                        console.error("Error:", e);
+                      }}
+                      onLoad={() => {
+                        console.log("Fusion result image loaded successfully:", currentJob.resultUrl);
+                      }}
                     />
                   </div>
 
@@ -486,6 +505,15 @@ export function FusionWorkspace({ judgeTestMode = false }: FusionWorkspaceProps)
                 <div className="aspect-square rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center text-muted-foreground">
                   <ImageIcon className="h-12 w-12 mb-4 opacity-50" />
                   <p className="text-sm">Upload images and create fusion to see result</p>
+                </div>
+              )}
+              
+              {/* Debug info - remove in production */}
+              {currentJob && currentJob.status === "completed" && !currentJob.resultUrl && (
+                <div className="p-4 bg-yellow-900/20 border border-yellow-500/50 rounded-lg">
+                  <p className="text-sm text-yellow-500">
+                    Status: {currentJob.status}, but no resultUrl. Job ID: {currentJob.jobId}
+                  </p>
                 </div>
               )}
             </CardContent>

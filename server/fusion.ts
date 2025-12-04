@@ -305,12 +305,21 @@ export function setupFusionRoutes(app: express.Express) {
         return res.status(404).json({ error: "Job not found" });
       }
       
+      console.log(`Status check for job ${jobId}:`, {
+        status: job.status,
+        progress: job.progress,
+        hasResultUrl: !!job.resultUrl,
+        resultUrl: job.resultUrl,
+        candidatesCount: job.candidates?.length || 0,
+      });
+      
       res.json({
         jobId: job.jobId,
         status: job.status,
         progress: job.progress,
         resultUrl: job.resultUrl,
-        candidates: job.candidates,
+        candidates: job.candidates || [],
+        explainability: job.explainability,
         error: job.error,
       });
     } catch (error: any) {
