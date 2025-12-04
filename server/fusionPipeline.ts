@@ -342,22 +342,35 @@ async function generateImageWithModel(
 }
 
 /**
- * Create a placeholder mannequin image using Cloudinary text/image generation
- * This is used when no mannequin template exists
+ * Create a placeholder mannequin image using Cloudinary
+ * This creates a simple gray silhouette that can be used as a base
+ * Note: This is a fallback - in production, upload actual mannequin images
  */
 function createPlaceholderMannequin(category: GarmentCategory): string {
-  // Use Cloudinary's text overlay to create a simple mannequin placeholder
-  // In production, you'd upload actual mannequin images
+  // Use a solid color image as mannequin base
+  // This will be a simple gray rectangle that we can overlay fabric on
+  // The actual mannequin shape will come from the fabric draping
   const categoryText = category.charAt(0).toUpperCase() + category.slice(1);
-  return cloudinary.url("sample", {
-    secure: true,
-    resource_type: "image",
-    transformation: [
-      { width: 1024, height: 1536, crop: "fill", color: "#f0f0f0", background: "#f0f0f0" },
-      { overlay: { font_family: "Arial", font_size: 80, text: `Mannequin%20${categoryText}`, color: "#999" }, gravity: "center", y: -100 },
-      { overlay: { font_family: "Arial", font_size: 40, text: "Placeholder", color: "#ccc" }, gravity: "center", y: 0 },
-    ],
-  });
+  
+  // Create a simple gray background that represents a mannequin silhouette
+  // We'll use Cloudinary's gradient feature to create a basic shape
+  try {
+    return cloudinary.url("sample", {
+      secure: true,
+      resource_type: "image",
+      transformation: [
+        { width: 1024, height: 1536, crop: "fill", background: "#e0e0e0" },
+        // Add a subtle gradient to suggest mannequin shape
+        { effect: "gradient_fade:symmetric_pad:0.3:0.5" },
+        { overlay: { font_family: "Arial", font_size: 60, text: `Mannequin%20Base`, color: "#999", opacity: 30 }, gravity: "center", y: 0 },
+      ],
+    });
+  } catch (error) {
+    // If Cloudinary fails, return a data URL or use fabric directly
+    console.warn("Failed to create placeholder mannequin:", error);
+    // Return a simple gray color as fallback
+    return "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='1024' height='1536'%3E%3Crect width='1024' height='1536' fill='%23e0e0e0'/%3E%3C/svg%3E";
+  }
 }
 
 /**
@@ -369,10 +382,87 @@ function generateMockFusion(initImage: string, controlnetImage: string, strength
   // If we have fabric images, composite them onto the mannequin
   const fabricToUse = fabricImages?.top || fabricImages?.bottom || fabricImages?.trims;
   
+  // Check if initImage is actually a fabric image (not a mannequin)
+  // This can happen if mannequin template lookup failed
+  const isFabricImage = !initImage.includes("mannequin") && 
+                        !initImage.includes("template") && 
+                        !initImage.includes("sample") &&
+                        (initImage.includes("fusion/uploads") || initImage.includes("fabric"));
+  
+  // If initImage is a fabric image, we need to use fabric as base but apply mannequin-like transformations
+  if (isFabricImage && fabricToUse) {
+    // Use the fabric image but transform it to look like it's draped on a mannequin
+    const fabricId = extractPublicId(fabricToUse);
+    if (fabricId) {
+      const cleanFabricId = fabricId.split("/").filter(part => 
+        !part.includes("c_") && 
+        !part.includes("w_") && 
+        !part.includes("h_") && 
+        !part.includes("q_") &&
+        !part.includes("v1") &&
+        !part.includes("v2")
+      ).join("/");
+      
+      if (cleanFabricId) {
+        try {
+          // Transform fabric to look like it's on a mannequin (portrait orientation, draped effect)
+          return cloudinary.url(cleanFabricId, {
+            secure: true,
+            resource_type: "image",
+            transformation: [
+              { width: 1024, height: 1536, crop: "fill", gravity: "center", quality: "auto:best" },
+              { effect: "art:zorro" }, // Artistic effect to simulate draping
+              { effect: `tint:${Math.round(strength * 30)}:FF6FB1` },
+              { effect: "vibrance:25" },
+              { effect: "saturation:15" },
+              // Add a subtle vignette to simulate mannequin shape
+              { effect: "vignette:50" },
+            ],
+          });
+        } catch (error) {
+          console.warn("Cloudinary fabric transformation failed:", error);
+        }
+      }
+    }
+  }
+  
   const publicId = extractPublicId(initImage);
   if (!publicId) {
-    // If not Cloudinary URL, return as-is
-    return initImage;
+    // If not Cloudinary URL and we have fabric, use fabric with transformations
+    if (fabricToUse) {
+      const fabricId = extractPublicId(fabricToUse);
+      if (fabricId) {
+        const cleanFabricId = fabricId.split("/").filter(part => 
+          !part.includes("c_") && 
+          !part.includes("w_") && 
+          !part.includes("h_") && 
+          !part.includes("q_") &&
+          !part.includes("v1") &&
+          !part.includes("v2")
+        ).join("/");
+        
+        if (cleanFabricId) {
+          try {
+            return cloudinary.url(cleanFabricId, {
+              secure: true,
+              resource_type: "image",
+              transformation: [
+                { width: 1024, height: 1536, crop: "fill", gravity: "center", quality: "auto:best" },
+                { effect: "art:zorro" },
+                { effect: `tint:${Math.round(strength * 40)}:FF6FB1` },
+                { effect: "vibrance:30" },
+                { effect: "saturation:20" },
+                { effect: "vignette:50" },
+              ],
+            });
+          } catch (error) {
+            console.warn("Cloudinary fabric fallback failed:", error);
+          }
+        }
+      }
+    }
+    // Last resort: return fabric image (this shouldn't happen in normal flow)
+    return fabricToUse || initImage;
   }
 
   // Ensure we have a clean public_id
