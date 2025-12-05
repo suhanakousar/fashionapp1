@@ -37,8 +37,12 @@ export default defineConfig({
         warn(warning);
       },
       treeshake: {
-        preset: 'smallest',
-        moduleSideEffects: false,
+        preset: 'recommended',
+        moduleSideEffects: (id) => {
+          // Don't tree-shake lucide-react
+          if (id.includes('lucide-react')) return true;
+          return false;
+        },
       },
     },
     commonjsOptions: {
