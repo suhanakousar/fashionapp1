@@ -1,9 +1,8 @@
 {
   "buildCommand": "npm run build",
-  "installCommand": "npm install && npm run postinstall || true",
+  "installCommand": "npm install",
   "outputDirectory": "dist",
   "devCommand": "npm run dev",
-  "installCommand": "npm install",
   "framework": null,
   "rewrites": [
     {
