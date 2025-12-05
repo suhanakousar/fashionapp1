@@ -14,16 +14,32 @@ This folder contains the **FastAPI Backend** that should be deployed separately 
 6. Add environment variables (see below)
 7. Deploy!
 
-### Option 2: Render
+### Option 2: Render (Recommended for Python)
 
-1. Go to [render.com](https://render.com)
-2. Create new "Web Service"
-3. Connect GitHub repository
-4. **Root Directory**: `backend-deploy`
-5. **Build Command**: (auto-detected from Dockerfile)
-6. **Start Command**: `uvicorn app:app --host 0.0.0.0 --port $PORT`
-7. Add environment variables
-8. Deploy!
+1. Go to [render.com](https://render.com) and sign in
+2. Click **"New +"** → **"Web Service"**
+3. Connect your GitHub repository
+4. **Settings:**
+   - **Name**: `styleweave-backend` (or any name you prefer)
+   - **Root Directory**: `backend-deploy`
+   - **Environment**: `Python 3`
+   - **Build Command**: `pip install -r requirements.txt`
+   - **Start Command**: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+5. **Environment Variables** (click "Add Environment Variable" for each):
+   ```
+   MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/styleweave
+   CLOUDINARY_CLOUD_NAME=your_cloud_name
+   CLOUDINARY_API_KEY=your_api_key
+   CLOUDINARY_API_SECRET=your_api_secret
+   CLOUDINARY_FOLDER=styleweave
+   CORS_ORIGINS=https://your-frontend.vercel.app
+   SECRET_KEY=your-secret-key-here
+   ACCESS_TOKEN_EXPIRE_MINUTES=60
+   ```
+6. Click **"Create Web Service"**
+7. Render will automatically deploy!
+
+**Note**: Render provides a free tier with automatic SSL. Your backend URL will be: `https://styleweave-backend.onrender.com`
 
 ### Option 3: Google Cloud Run
 
@@ -82,16 +98,16 @@ backend-deploy/
 ## 🔗 API Endpoints
 
 After deployment, your API will be available at:
-- `https://your-backend.railway.app/v1/*` - All API endpoints
-- `https://your-backend.railway.app/health` - Health check
-- `https://your-backend.railway.app/docs` - API documentation
+- `https://your-backend.onrender.com/v1/*` - All API endpoints (or railway.app if using Railway)
+- `https://your-backend.onrender.com/health` - Health check
+- `https://your-backend.onrender.com/docs` - API documentation (FastAPI Swagger UI)
 
 ## 📝 Update Frontend
 
 After deploying the backend, update your frontend to use the backend URL:
 
 1. Set environment variable in Vercel:
-   - `VITE_API_URL=https://your-backend.railway.app`
+   - `VITE_API_URL=https://your-backend.onrender.com` (or railway.app if using Railway)
 
 2. Or update frontend code to use the backend URL directly
 
