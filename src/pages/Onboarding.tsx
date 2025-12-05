@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Upload, Wand2, ArrowRight } from "lucide-react";
@@ -47,7 +47,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
   };
 
   const slide = slides[currentSlide];
-  const Icon = slide.icon;
+  const IconComponent = slide.icon;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-royal-plum via-midnight-indigo to-opal-lavender flex items-center justify-center p-4 relative overflow-hidden">
@@ -92,7 +92,7 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
               className="flex justify-center"
             >
               <div className={`p-8 rounded-3xl bg-gradient-to-br ${slide.gradient} shadow-glow-lg`}>
-                <Icon className="w-24 h-24 text-pearl-white" />
+                {React.createElement(IconComponent, { className: "w-24 h-24 text-pearl-white" })}
               </div>
             </motion.div>
 
