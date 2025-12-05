@@ -4,10 +4,26 @@
  * This avoids permission issues with the vite binary
  */
 import { build } from 'vite';
-import { defineConfig } from './vite.config.ts';
+import { fileURLToPath } from 'url';
+import { dirname, resolve } from 'path';
+import react from '@vitejs/plugin-react';
 
-const config = await import('./vite.config.ts');
-const viteConfig = config.default;
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const viteConfig = {
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
+    },
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    minify: 'esbuild',
+  },
+};
 
 try {
   await build(viteConfig);
