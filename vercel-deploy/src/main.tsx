@@ -13,8 +13,18 @@ if (!rootElement) {
 
 console.log("Starting React app...");
 
+// Add global error handler
+window.addEventListener("error", (event) => {
+  console.error("Global error:", event.error);
+});
+
+window.addEventListener("unhandledrejection", (event) => {
+  console.error("Unhandled promise rejection:", event.reason);
+});
+
 try {
-  ReactDOM.createRoot(rootElement).render(
+  const root = ReactDOM.createRoot(rootElement);
+  root.render(
     <React.StrictMode>
       <ErrorBoundary>
         <BrowserRouter>
@@ -26,12 +36,16 @@ try {
   console.log("React app rendered successfully");
 } catch (error) {
   console.error("Failed to render app:", error);
+  const errorMessage = error instanceof Error ? error.message : String(error);
+  const errorStack = error instanceof Error ? error.stack : "";
+  
   rootElement.innerHTML = `
     <div style="padding: 20px; font-family: system-ui; text-align: center; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #4C1A4F 0%, #0A0E37 50%, #C8B7E3 100%); color: #E9D7A6;">
       <h1 style="font-size: 2rem; margin-bottom: 1rem;">Error Loading App</h1>
       <p style="margin-bottom: 1rem;">Please refresh the page or check the console for details.</p>
-      <pre style="text-align: left; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; overflow: auto; max-width: 600px;">
-        ${error instanceof Error ? error.message : String(error)}
+      <pre style="text-align: left; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 4px; overflow: auto; max-width: 600px; max-height: 300px; font-size: 0.875rem;">
+        ${errorMessage}
+        ${errorStack ? `\n\n${errorStack}` : ''}
       </pre>
       <button onclick="window.location.reload()" style="margin-top: 1rem; padding: 12px 24px; background: #E9D7A6; color: #0A0E37; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer;">
         Reload Page
