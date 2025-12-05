@@ -1,140 +1,186 @@
-# Quick Start Guide: Frankenstein Fusion Outfit Designer
+# StyleWeave Backend - Quick Start
 
-## 🚀 Get Started in 5 Minutes
+## 🚀 Get Running in 5 Minutes
 
-### Prerequisites
-- Node.js 18+ installed
-- MongoDB Atlas account (free)
-- Cloudinary account (free)
-- Git repository cloned
+### Step 1: Environment Setup
+```bash
+# Copy environment template
+cp .env.example .env
 
-### Step 1: Install Dependencies
+# Edit .env with your credentials:
+# - CLOUDINARY_CLOUD_NAME, API_KEY, API_SECRET
+# - MONGO_URI (default: mongodb://localhost:27017/styleweave)
+# - REDIS_URL (default: redis://localhost:6379/0)
+```
+
+### Step 2: Install Dependencies (Local Dev)
+
+**Option A: Using Docker (Recommended)**
+```bash
+cd docker
+docker-compose -f docker-compose.cpu.yml up --build
+```
+
+**Option B: Manual Setup**
+```bash
+# Terminal 1: MongoDB
+docker run -d -p 27017:27017 --name mongo mongo:6
+
+# Terminal 2: Redis
+docker run -d -p 6379:6379 --name redis redis:7-alpine
+
+# Terminal 3: API
+cd api
+python -m venv venv
+source venv/bin/activate  # Windows: venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn app:app --reload --port 8000
+
+# Terminal 4: Worker (optional for previews)
+cd worker
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+# Note: HD rendering requires GPU and SAM checkpoint
+celery -A tasks worker --loglevel=info
+```
+
+### Step 3: Test the API
 
 ```bash
-npm install
+# Health check
+curl http://localhost:8000/health
+
+# View API docs
+open http://localhost:8000/docs
 ```
 
-### Step 2: Set Up Environment Variables
-
-Create a `.env` file in the root directory:
-
-```env
-# MongoDB (get from MongoDB Atlas)
-DATABASE_URL=mongodb+srv://username:password@cluster.mongodb.net/dbname?retryWrites=true&w=majority
-
-# Session Secret (generate a random string)
-SESSION_SECRET=your-random-secret-key-here
-
-# Cloudinary (get from Cloudinary Dashboard)
-CLOUDINARY_URL=cloudinary://api_key:api_secret@cloud_name
-
-# Optional: HuggingFace (for real AI fusion, otherwise uses mock)
-HUGGINGFACE_API_KEY=hf_xxxxxxxxxxxxx
-
-# Optional: Face masking policy
-AUTO_MASK_FACES=true
-```
-
-### Step 3: Start Development Server
+### Step 4: Upload Your First Image
 
 ```bash
-npm run dev
+# Upload a model image
+curl -X POST "http://localhost:8000/v1/upload" \
+  -F "file=@your_model_image.jpg" \
+  -F "type=model" \
+  -F "project_id=test_project"
 ```
 
-The app will be available at `http://localhost:5173`
+**Response:**
+```json
+{
+  "success": true,
+  "upload": {
+    "_id": "65f123...",
+    "type": "model",
+    "cloudinary": {
+      "secure_url": "https://res.cloudinary.com/..."
+    }
+  }
+}
+```
 
-### Step 4: Test the Fusion Feature
+### Step 5: Generate Masks (Requires SAM)
 
-1. Navigate to `http://localhost:5173/fusion`
-2. Enable "Judge Test Mode" (if in development)
-3. Upload two images or use preloaded test images
-4. Select fusion mode and strength
-5. Click "Create Fusion"
-6. Watch the progress and view results!
+**Note:** SAM checkpoint must be downloaded first:
+```bash
+mkdir -p weights
+# Download from: https://github.com/facebookresearch/segment-anything#model-checkpoints
+wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth -O weights/sam_vit_h.pth
+```
 
----
+Then generate masks:
+```bash
+curl -X POST "http://localhost:8000/v1/mask/generate" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "upload_id": "YOUR_UPLOAD_ID",
+    "auto_refine": true
+  }'
+```
 
-## 🎯 Key Pages
-
-- **Home** (`/`) - Landing page with Hero carousel
-- **Fusion** (`/fusion`) - Main fusion workspace
-- **Admin Dashboard** (`/admin/dashboard`) - Designer portal
-- **Client Portal** (`/client/dashboard`) - Customer portal
-
----
-
-## 🧪 Judge Test Mode
-
-For hackathon demos, enable Judge Test Mode:
-
-1. Go to `/fusion?judge=true`
-2. Or toggle the switch in development mode
-3. See Kiro integration showcase
-4. Preloaded test images ready to use
-
----
-
-## 📚 Documentation
-
-- `DEMO_SCRIPT.md` - 3-minute demo script
-- `JUDGE_PITCH.md` - Judge pitch paragraph
-- `DEPLOYMENT_GUIDE.md` - Full deployment instructions
-- `HOW_KIRO_HELPED.md` - Kiro usage examples
-- `IMPLEMENTATION_SUMMARY.md` - Complete feature list
-
----
-
-## 🔧 Common Issues
-
-### "Database connection failed"
-- Check `DATABASE_URL` is correct
-- Verify MongoDB network access allows your IP
-- Check database user credentials
-
-### "Cloudinary upload failed"
-- Verify `CLOUDINARY_URL` is correct
-- Check Cloudinary account limits
-- Ensure API key has upload permissions
-
-### "Fusion job stuck"
-- Check Vercel function logs
-- Verify HuggingFace API key (or use mock mode)
-- Check MongoDB connection
-
----
-
-## 🎨 Features to Demo
-
-1. **Hero Carousel** - Before/after transformations on homepage
-2. **Fusion Workspace** - Upload, configure, create fusion
-3. **Explainability Panel** - AI transparency with heatmaps
-4. **Mannequin Try-On** - Virtual preview with controls
-5. **Judge Test Mode** - Kiro integration showcase
-6. **Lookbook Generator** - Batch variation creation
-7. **Social Share Cards** - Instagram-ready images
-
----
-
-## 📦 Build for Production
+### Step 6: Apply Preview (Fast, No GPU)
 
 ```bash
-npm run build
+curl -X POST "http://localhost:8000/v1/outfit/apply_preview" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "project_id": "test_project",
+    "model_upload_id": "MODEL_ID",
+    "top_fabric_upload_id": "FABRIC_ID",
+    "mask_top_id": "MASK_ID",
+    "scale": 1.0
+  }'
 ```
 
-Output will be in `dist/public/`
+## 📋 Common Commands
 
----
+### Docker Commands
+```bash
+# Start all services
+docker-compose up -d
 
-## 🚢 Deploy to Vercel
+# View logs
+docker-compose logs -f api
+docker-compose logs -f worker
 
-1. Push code to GitHub
-2. Import project in Vercel
-3. Add environment variables
-4. Deploy!
+# Stop services
+docker-compose down
 
-See `DEPLOYMENT_GUIDE.md` for detailed instructions.
+# Rebuild after code changes
+docker-compose up --build
+```
 
----
+### Development Commands
+```bash
+# Run tests
+pytest tests/ -v
 
-**Need Help?** Check the documentation files or review the `.kiro` folder for implementation details.
+# Check API health
+curl http://localhost:8000/health
+
+# View API documentation
+open http://localhost:8000/docs
+```
+
+## ⚠️ Important Notes
+
+1. **SAM Checkpoint**: Required for mask generation. Download from [SAM GitHub](https://github.com/facebookresearch/segment-anything#model-checkpoints)
+
+2. **GPU for HD Renders**: HD rendering requires:
+   - NVIDIA GPU with CUDA
+   - Stable Diffusion model (auto-downloads)
+   - ~8GB+ VRAM recommended
+
+3. **Preview Mode**: Works without GPU using OpenCV (fast, CPU-only)
+
+4. **Cloudinary**: Required for image storage. Sign up at [cloudinary.com](https://cloudinary.com)
+
+## 🐛 Troubleshooting
+
+**Import Errors:**
+- Ensure Python path includes project root
+- Check that worker directory is accessible
+
+**MongoDB Connection:**
+```bash
+# Test connection
+mongosh mongodb://localhost:27017/styleweave
+```
+
+**Redis Connection:**
+```bash
+# Test connection
+redis-cli ping
+# Should return: PONG
+```
+
+**SAM Not Found:**
+- Check `SAM_CHECKPOINT` path in `.env`
+- Ensure checkpoint file exists at specified path
+
+## 📚 Next Steps
+
+- Read [README.md](README.md) for full documentation
+- See [SETUP.md](SETUP.md) for detailed setup
+- Check [DEPLOYMENT.md](DEPLOYMENT.md) for production deployment
 

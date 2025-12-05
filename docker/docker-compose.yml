@@ -1,0 +1,65 @@
+version: '3.8'
+
+services:
+  mongo:
+    image: mongo:6
+    container_name: styleweave_mongo
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+    environment:
+      - MONGO_INITDB_DATABASE=styleweave
+
+  redis:
+    image: redis:7-alpine
+    container_name: styleweave_redis
+    restart: always
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.api
+    container_name: styleweave_api
+    env_file: ../.env
+    ports:
+      - "8000:8000"
+    depends_on:
+      - mongo
+      - redis
+    volumes:
+      - ../api:/app
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.worker
+    container_name: styleweave_worker
+    env_file: ../.env
+    depends_on:
+      - redis
+      - mongo
+    volumes:
+      - ../worker:/worker
+      - weights:/weights  # Mount SAM checkpoints here
+    restart: unless-stopped
+    # GPU support (uncomment if you have nvidia-docker)
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
+volumes:
+  mongo-data:
+  redis-data:
+  weights:
+

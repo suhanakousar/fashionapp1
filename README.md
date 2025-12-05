@@ -1,246 +1,495 @@
-# Frankenstein Fusion Outfit Designer
+# StyleWeave Backend
 
-> **AI-Powered Fashion Fusion System** - Combine traditional Indian wear with gothic aesthetics using HuggingFace image-to-image models. Built with Kiro (AI pair programmer) for hackathon submission.
+Production-ready FastAPI backend for applying user-provided fabrics to model images using AI segmentation and inpainting.
 
-![Kiroween Theme](https://img.shields.io/badge/Theme-Kiroween-dark?style=flat-square)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.6-blue?style=flat-square)
-![React](https://img.shields.io/badge/React-18-blue?style=flat-square)
-![Vercel](https://img.shields.io/badge/Deploy-Vercel-black?style=flat-square)
+## Features
 
-## 🎯 Project Overview
+- **Image Upload**: Upload model photos and fabric images via Cloudinary
+- **AI Segmentation**: Automatic mask generation using SAM (Segment Anything Model)
+- **Fast Preview**: Classical OpenCV texture application for instant previews
+- **HD Rendering**: GPU-accelerated Stable Diffusion inpainting for high-quality results
+- **Background Jobs**: Celery-based async processing with Redis
+- **MongoDB Storage**: Persistent metadata and job tracking
 
-Frankenstein Fusion Outfit Designer is a full-stack fashion design management system with an AI-powered fusion feature that combines two fashion images to create unique gothic-inspired designs. The system preserves garment silhouettes while applying patterns, textures, and colors from a second image.
+## Architecture
 
-### Key Features
+```
+┌─────────┐     ┌─────────┐     ┌─────────┐
+│  FastAPI│────▶│ MongoDB │     │ Redis   │
+│   API   │     │         │     │ (Celery)│
+└─────────┘     └─────────┘     └─────────┘
+     │                                  │
+     │                                  │
+     ▼                                  ▼
+┌─────────┐                     ┌─────────────┐
+│Cloudinary│                     │   Celery    │
+│  Storage │                     │   Worker    │
+└─────────┘                     └─────────────┘
+                                        │
+                                        ▼
+                                ┌─────────────┐
+                                │  SAM / SD   │
+                                │  Inference  │
+                                └─────────────┘
+```
 
-- **🎨 AI-Powered Fusion** - HuggingFace image-to-image models for fashion fusion
-- **👗 Silhouette Preservation** - Maintains original garment structure
-- **🎭 Kiroween Theme** - Dark gothic aesthetic with neon accents
-- **🔍 Explainability** - Heatmaps and designer notes for AI transparency
-- **👤 Virtual Try-On** - Mannequin preview with drag/scale controls
-- **📚 Lookbook Generator** - One-click batch variation creation
-- **📱 Social Sharing** - Instagram-ready 1080x1080 cards
-- **♿ Accessible** - WCAG AA compliant, keyboard navigable
-- **🤖 Kiro Integration** - Complete `.kiro` folder with specs and prompts
+## Quick Start
 
-## 🚀 Quick Start
+### Prerequisites
+
+- Docker and Docker Compose
+- NVIDIA Docker (for GPU support) - optional
+- Cloudinary account
+- MongoDB (or use Docker)
+- Redis (or use Docker)
+
+### 1. Environment Setup
+
+Copy `.env.example` to `.env` and fill in your credentials:
 
 ```bash
-# Install dependencies
-npm install
-
-# Set up environment variables (see .env.example)
 cp .env.example .env
-
-# Start development server
-npm run dev
 ```
 
-Visit `http://localhost:5173` and navigate to `/fusion` to try the fusion feature!
+Edit `.env` with your:
+- Cloudinary credentials
+- MongoDB URI
+- Redis URL
+- Secret keys
 
-See [QUICK_START.md](./QUICK_START.md) for detailed setup instructions.
+### 2. Download Model Checkpoints
 
-## 📁 Project Structure
+**SAM Checkpoint** (required for segmentation):
+```bash
+# Create weights directory
+mkdir -p weights
 
-```
-BuildEachAll245/
-├── .kiro/                    # Kiro AI specifications
-│   ├── spec.yaml            # Module definitions
-│   ├── steering.md           # Design constraints
-│   ├── hooks/                # Event hooks
-│   └── prompts/              # AI prompt templates
-├── client/                   # React frontend
-│   └── src/
-│       ├── components/        # React components
-│       │   ├── Hero.tsx      # Landing hero with carousel
-│       │   ├── FusionWorkspace.tsx
-│       │   ├── MannequinCanvas.tsx
-│       │   ├── ExplainabilityPanel.tsx
-│       │   └── JudgeTestMode.tsx
-│       ├── pages/            # Page components
-│       └── lib/              # Utilities
-├── server/                   # Express backend
-│   ├── fusion.ts            # Fusion API endpoints
-│   ├── fusionPipeline.ts    # Image processing pipeline
-│   └── storage.ts            # Database operations
-├── shared/                   # Shared types
-│   └── schema.ts            # TypeScript types & Zod schemas
-└── docs/                     # Documentation
+# Download SAM checkpoint (choose one):
+# - sam_vit_h.pth (2.4GB) - Best quality
+# - sam_vit_l.pth (1.2GB) - Balanced
+# - sam_vit_b.pth (375MB) - Fastest
+
+# Example:
+wget https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth -O weights/sam_vit_h.pth
 ```
 
-## 🎨 Tech Stack
+**Stable Diffusion** (auto-downloaded on first use):
+- Model: `runwayml/stable-diffusion-inpainting` (default)
+- Downloads automatically via HuggingFace
 
-### Frontend
-- **React 18** + **TypeScript** - UI framework
-- **Tailwind CSS** + **shadcn/ui** - Styling and components
-- **Framer Motion** - Animations
-- **TanStack Query** - Data fetching
-- **react-dropzone** - File uploads
+### 3. Run with Docker Compose
 
-### Backend
-- **Express** + **TypeScript** - API server
-- **MongoDB** (Atlas) - Database
-- **Cloudinary** - Image storage & processing
-- **HuggingFace API** - AI image-to-image models
-
-### Development
-- **Vite** - Build tool
-- **Jest** - Testing
-- **Kiro** - AI pair programming
-
-## 🎯 Core Features
-
-### 1. Fusion Workspace
-- Drag-and-drop image uploads
-- Fusion mode selector (pattern/color/texture)
-- Strength slider (0.5-0.9)
-- Real-time progress tracking
-- Candidate carousel with multiple results
-
-### 2. Explainability Panel
-- Heatmap overlay showing contribution regions
-- Auto-generated designer notes
-- Pattern contribution percentages
-- Visual feedback on fusion process
-
-### 3. Mannequin Try-On
-- Virtual mannequin preview
-- Drag, scale, and rotate controls
-- Spooky overlay toggles
-- Fabric fold animations
-
-### 4. Judge Test Mode
-- Kiro integration showcase
-- Example prompts display
-- Test data preloading
-- `.kiro` folder highlights
-
-## 📚 Documentation
-
-- **[QUICK_START.md](./QUICK_START.md)** - Get started in 5 minutes
-- **[DEMO_SCRIPT.md](./DEMO_SCRIPT.md)** - 3-minute demo script
-- **[JUDGE_PITCH.md](./JUDGE_PITCH.md)** - Judge pitch paragraph
-- **[DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md)** - Full deployment guide
-- **[HOW_KIRO_HELPED.md](./HOW_KIRO_HELPED.md)** - Kiro usage examples
-- **[IMPLEMENTATION_SUMMARY.md](./IMPLEMENTATION_SUMMARY.md)** - Feature checklist
-- **[FINAL_IMPLEMENTATION_STATUS.md](./FINAL_IMPLEMENTATION_STATUS.md)** - Status report
-
-## 🎬 Demo Flow
-
-1. **Landing Page** - Hero carousel with before/after transformations
-2. **Fusion Page** - Upload images → Configure → Create fusion
-3. **Results** - View fusion with explainability panel
-4. **Try-On** - Preview on virtual mannequin
-5. **Lookbook** - Generate 6 variations
-6. **Share** - Create Instagram-ready card
-
-## 🔐 Environment Variables
-
-```env
-# Required
-DATABASE_URL=mongodb+srv://...
-SESSION_SECRET=...
-CLOUDINARY_URL=cloudinary://...
-
-# Optional
-HUGGINGFACE_API_KEY=...  # Uses mock mode if not set
-AUTO_MASK_FACES=true     # Face masking policy
-```
-
-## 🚢 Deployment
-
-### Vercel (Recommended)
-
-1. Push code to GitHub
-2. Import project in Vercel
-3. Add environment variables
-4. Deploy!
-
-See [DEPLOYMENT_GUIDE.md](./DEPLOYMENT_GUIDE.md) for detailed instructions.
-
-### Free Tier Services
-
-- ✅ **MongoDB Atlas** - M0 free tier (512MB)
-- ✅ **Cloudinary** - Free tier (25GB storage, 25GB bandwidth)
-- ✅ **Vercel** - Hobby plan (100GB bandwidth)
-- ✅ **HuggingFace** - Rate-limited API (mock fallback available)
-
-## 🧪 Testing
+**Option A: GPU Mode** (recommended for HD rendering)
 
 ```bash
-# Run tests
-npm test
-
-# Type check
-npm run check
-
-# Build
-npm run build
+cd docker
+docker-compose up --build
 ```
 
-## 🤖 Kiro Integration
+**Option B: CPU-Only Mode** (for local dev, previews only)
 
-This project was built with **Kiro** (AI pair programmer). The `.kiro` folder contains:
+Edit `docker/docker-compose.yml` and change:
+```yaml
+worker:
+  build:
+    dockerfile: docker/Dockerfile.worker.cpu  # Use CPU version
+```
 
-- **spec.yaml** - Module specifications and endpoints
-- **steering.md** - Fashion designer persona and constraints
-- **hooks/** - Event-driven architecture hooks
-- **prompts/** - AI prompt templates for HuggingFace
+Then run:
+```bash
+cd docker
+docker-compose up --build
+```
 
-See [HOW_KIRO_HELPED.md](./HOW_KIRO_HELPED.md) for exact prompts used.
+### 4. Access API
 
-## ♿ Accessibility
+- API: http://localhost:8000
+- API Docs: http://localhost:8000/docs
+- Health Check: http://localhost:8000/health
 
-- ✅ Keyboard navigation support
-- ✅ ARIA labels on all interactive elements
-- ✅ Screen reader announcements
-- ✅ Focus rings for keyboard users
-- ✅ Reduced motion support
-- ✅ WCAG AA compliant
+## API Endpoints
 
-## 📊 Project Stats
+### 1. Upload Image
 
-- **React Components**: 7 major components
-- **Backend Endpoints**: 7 fusion API routes
-- **Database Collections**: 12+ (including FusionJobs)
-- **Documentation Files**: 7 comprehensive guides
-- **Lines of Code**: ~5,000+ (TypeScript)
+```bash
+POST /v1/upload
+Content-Type: multipart/form-data
 
-## 🎯 Hackathon Highlights
+file: <image file>
+type: model | top_fabric | bottom_fabric
+project_id: <optional>
+```
 
-### Technical Innovation
-- AI-powered image fusion with explainability
-- Real-time progress tracking
-- Background job processing
-- Mock mode for development
+**Response:**
+```json
+{
+  "success": true,
+  "upload": {
+    "_id": "...",
+    "type": "model",
+    "cloudinary": {
+      "public_id": "...",
+      "secure_url": "...",
+      "width": 1024,
+      "height": 1536
+    }
+  }
+}
+```
 
-### Design Excellence
-- Kiroween dark theme with neon accents
-- Smooth microinteractions
-- Responsive design
-- Professional UI/UX
+### 2. Generate Masks
 
-### Kiro Integration
-- Complete `.kiro` folder structure
-- Specification-driven development
-- Event hooks and prompts
-- Reproducible code generation
+```bash
+POST /v1/mask/generate
+Content-Type: application/json
 
-## 📝 License
+{
+  "upload_id": "<model_upload_id>",
+  "auto_refine": true
+}
+```
 
-MIT
+**Response:**
+```json
+{
+  "masks": [
+    {
+      "id": "<mask_id>",
+      "type": "top",
+      "cloudinary": {
+        "public_id": "...",
+        "secure_url": "..."
+      }
+    },
+    {
+      "id": "<mask_id>",
+      "type": "bottom",
+      "cloudinary": {...}
+    }
+  ]
+}
+```
 
-## 🙏 Acknowledgments
+### 3. Apply Preview (Fast)
 
-- **Kiro** - AI pair programmer
-- **HuggingFace** - AI models
-- **Cloudinary** - Image processing
-- **shadcn/ui** - UI components
-- **Tailwind CSS** - Styling framework
+```bash
+POST /v1/outfit/apply_preview
+Content-Type: application/json
 
----
+{
+  "project_id": "...",
+  "model_upload_id": "...",
+  "top_fabric_upload_id": "...",
+  "mask_top_id": "...",
+  "scale": 1.0
+}
+```
 
-**Built for Hackathon Submission** | **Version 1.0.0** | **2024**
+**Response:**
+```json
+{
+  "preview": {
+    "cloudinary": {
+      "public_id": "...",
+      "secure_url": "..."
+    },
+    "job_id": "..."
+  }
+}
+```
 
-For questions or issues, check the documentation files or review the `.kiro` folder for implementation details.
+### 4. Generate HD Render
+
+```bash
+POST /v1/outfit/generate_hd
+Content-Type: application/json
+
+{
+  "project_id": "...",
+  "model_upload_id": "...",
+  "top_fabric_upload_id": "...",
+  "mask_top_id": "...",
+  "prompt": "elegant silk fabric"
+}
+```
+
+**Response:**
+```json
+{
+  "job_id": "<job_id>",
+  "status": "queued"
+}
+```
+
+### 5. Check Job Status
+
+```bash
+GET /v1/job/{job_id}
+```
+
+**Response:**
+```json
+{
+  "_id": "...",
+  "status": "done",
+  "progress": 100,
+  "result": {
+    "cloudinary": {
+      "public_id": "...",
+      "secure_url": "..."
+    }
+  }
+}
+```
+
+## Local Development (Without Docker)
+
+### 1. Install Dependencies
+
+**API:**
+```bash
+cd api
+pip install -r requirements.txt
+```
+
+**Worker:**
+```bash
+cd worker
+pip install -r requirements.txt
+pip install git+https://github.com/facebookresearch/segment-anything.git
+```
+
+### 2. Start Services
+
+**Terminal 1 - MongoDB:**
+```bash
+docker run -d -p 27017:27017 mongo:6
+```
+
+**Terminal 2 - Redis:**
+```bash
+docker run -d -p 6379:6379 redis:7-alpine
+```
+
+**Terminal 3 - API:**
+```bash
+cd api
+uvicorn app:app --reload --port 8000
+```
+
+**Terminal 4 - Worker:**
+```bash
+cd worker
+celery -A tasks worker --loglevel=info
+```
+
+## Testing
+
+### Unit Tests
+
+```bash
+# Install test dependencies
+pip install pytest pytest-asyncio httpx
+
+# Run tests
+pytest tests/
+```
+
+### Integration Test (Smoke Test)
+
+```bash
+# 1. Upload model image
+curl -X POST "http://localhost:8000/v1/upload" \
+  -F "file=@test_image.jpg" \
+  -F "type=model"
+
+# 2. Generate masks (use upload_id from step 1)
+curl -X POST "http://localhost:8000/v1/mask/generate" \
+  -H "Content-Type: application/json" \
+  -d '{"upload_id": "<upload_id>", "auto_refine": true}'
+
+# 3. Apply preview (use IDs from previous steps)
+curl -X POST "http://localhost:8000/v1/outfit/apply_preview" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "project_id": "test",
+    "model_upload_id": "<model_id>",
+    "top_fabric_upload_id": "<fabric_id>",
+    "mask_top_id": "<mask_id>"
+  }'
+```
+
+## Project Structure
+
+```
+styleweave/
+├── api/                    # FastAPI application
+│   ├── app.py             # Main FastAPI app
+│   ├── routes/            # API endpoints
+│   │   ├── upload.py
+│   │   ├── mask.py
+│   │   ├── outfit.py
+│   │   └── jobs.py
+│   ├── core/              # Core utilities
+│   │   ├── cloudinary_utils.py
+│   │   ├── mongo.py
+│   │   └── security.py
+│   ├── schemas.py         # Pydantic models
+│   └── requirements.txt
+│
+├── worker/                # Celery worker
+│   ├── tasks.py          # Background tasks
+│   ├── inference/        # AI inference modules
+│   │   ├── sam_segmentation.py
+│   │   ├── texture_apply.py
+│   │   └── inpaint_sd.py
+│   └── requirements.txt
+│
+├── docker/                # Docker configuration
+│   ├── Dockerfile.api
+│   ├── Dockerfile.worker
+│   ├── Dockerfile.worker.cpu
+│   └── docker-compose.yml
+│
+├── tests/                 # Test files
+│   ├── test_upload.py
+│   ├── test_mask.py
+│   └── test_integration.py
+│
+├── notebooks/            # Jupyter notebooks (reference)
+│   └── change-outfit-in-images-with-stable-diffusion.ipynb
+│
+├── .env.example          # Environment template
+└── README.md
+```
+
+## Configuration
+
+### SAM Model Selection
+
+Edit `worker/inference/sam_segmentation.py`:
+
+```python
+MODEL_CHECKPOINT = "/weights/sam_vit_h.pth"  # or sam_vit_l.pth, sam_vit_b.pth
+MODEL_TYPE = "vit_h"  # or "vit_l", "vit_b"
+```
+
+### Stable Diffusion Model
+
+Set in `.env`:
+```
+SD_MODEL_ID=runwayml/stable-diffusion-inpainting
+```
+
+Alternative models:
+- `stabilityai/stable-diffusion-2-inpainting`
+- Custom fine-tuned models
+
+### Using SlimSAM
+
+To use SlimSAM instead of SAM:
+
+1. Install: `pip install slimsam`
+2. Update `sam_segmentation.py`:
+   ```python
+   from slimsam import build_slimsam
+   model = build_slimsam("slimsam-77")
+   ```
+
+## Production Deployment
+
+### Security Checklist
+
+- [ ] Change `SECRET_KEY` in production
+- [ ] Set `CORS_ORIGINS` to specific domains
+- [ ] Use MongoDB authentication
+- [ ] Enable Cloudinary signed URLs for private images
+- [ ] Set up rate limiting
+- [ ] Use HTTPS
+- [ ] Monitor GPU usage and costs
+
+### Scaling
+
+- **API**: Use multiple uvicorn workers or Gunicorn
+- **Worker**: Scale Celery workers horizontally
+- **MongoDB**: Use replica sets for high availability
+- **Redis**: Use Redis Cluster for high throughput
+
+### Monitoring
+
+- **Celery**: Monitor queue length and job durations
+- **GPU**: Track utilization and memory usage
+- **API**: Monitor response times and error rates
+- **Cloudinary**: Track bandwidth and storage usage
+
+### Cost Optimization
+
+- **Preview Mode**: Free tier (CPU-only, fast)
+- **HD Renders**: Charge per render or use credits
+- **Cloudinary**: Use transformations for previews (cheaper)
+- **GPU**: Use spot instances or reserved capacity
+
+## Troubleshooting
+
+### SAM Model Not Found
+
+```
+FileNotFoundError: SAM checkpoint not found
+```
+
+**Solution:** Download SAM checkpoint to `/weights/` directory
+
+### CUDA Out of Memory
+
+```
+RuntimeError: CUDA out of memory
+```
+
+**Solution:**
+- Reduce batch size
+- Use smaller SD model
+- Enable attention slicing (already enabled)
+- Use CPU fallback for previews
+
+### Celery Worker Not Processing Jobs
+
+**Check:**
+1. Redis is running: `docker ps | grep redis`
+2. Worker is connected: Check Celery logs
+3. Job is queued: Check MongoDB `jobs` collection
+
+### Mask Quality Issues
+
+**Improvements:**
+1. Use pose detection (MediaPipe) to guide mask selection
+2. Provide user mask editing UI
+3. Fine-tune SAM on fashion images
+4. Use multiple mask candidates and select best
+
+## Advanced Features
+
+### Fabric Conditioning
+
+For better fabric matching in SD inpainting:
+
+1. **DreamBooth Fine-tuning**: Train SD on fabric images
+2. **ControlNet**: Use ControlNet for precise control
+3. **Image Embeddings**: Use CLIP embeddings to guide generation
+
+### Mask Refinement
+
+- Use pose keypoints to identify top/bottom regions
+- Combine multiple SAM predictions
+- Apply morphological operations for cleaner masks
+
+## License
+
+MIT License
+
+## Support
+
+For issues and questions:
+- GitHub Issues: [Create an issue]
+- Documentation: See inline code comments
+- Email: support@styleweave.ai
 
