@@ -52,4 +52,7 @@ export default defineConfig({
       target: "es2020",
     },
   },
+  ssr: {
+    noExternal: ["lucide-react"],
+  },
 });
