@@ -16,6 +16,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    console.log("App mounted");
     try {
       const seen = typeof window !== "undefined" 
         ? localStorage.getItem("styleweave-onboarding-seen")
