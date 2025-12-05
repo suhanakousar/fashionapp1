@@ -8,26 +8,66 @@ import * as LucideIcons from "lucide-react";
 const { ArrowLeft, Upload, X, Check } = LucideIcons;
 import { createImageUrl } from "../lib/utils";
 import { useToast } from "@/components/ui/use-toast";
+import { api } from "../lib/api";
 
 export default function UploadModel() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [preview, setPreview] = useState<string | null>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadId, setUploadId] = useState<string | null>(null);
 
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    async (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
       if (file) {
         setFile(file);
+        // Show preview immediately
         createImageUrl(file).then(setPreview);
-        toast({
-          title: "Image uploaded",
-          description: "Model photo uploaded successfully",
-        });
+        
+        // Upload to backend
+        setIsUploading(true);
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('type', 'model');
+          
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+          const response = await fetch(`${API_URL}/v1/upload`, {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!response.ok) {
+            throw new Error('Upload failed');
+          }
+          
+          const result = await response.json();
+          setUploadId(result.upload._id);
+          
+          // Store both preview and upload data
+          localStorage.setItem("styleweave-model-image", preview || '');
+          localStorage.setItem("styleweave-model-upload-id", result.upload._id);
+          localStorage.setItem("styleweave-model-url", result.upload.cloudinary.secure_url);
+          
+          toast({
+            title: "Image uploaded",
+            description: "Model photo uploaded and stored successfully",
+          });
+        } catch (error) {
+          console.error("Upload error:", error);
+          toast({
+            title: "Upload failed",
+            description: "Failed to upload to server. File saved locally only.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsUploading(false);
+        }
       }
     },
-    [toast]
+    [toast, preview]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -39,9 +79,15 @@ export default function UploadModel() {
   });
 
   const handleContinue = () => {
-    if (preview) {
-      // Store in localStorage for now
-      localStorage.setItem("styleweave-model-image", preview);
+    if (preview && uploadId) {
+      navigate("/home");
+    } else if (preview) {
+      // If upload failed, still allow continue with local preview
+      toast({
+        title: "Warning",
+        description: "File not uploaded to server. Some features may not work.",
+        variant: "destructive",
+      });
       navigate("/home");
     }
   };
@@ -130,6 +176,7 @@ export default function UploadModel() {
                   variant="outline"
                   onClick={handleRemove}
                   className="flex-1"
+                  disabled={isUploading}
                 >
                   Remove
                 </Button>
@@ -137,9 +184,23 @@ export default function UploadModel() {
                   variant="default"
                   onClick={handleContinue}
                   className="flex-1"
+                  disabled={isUploading || !uploadId}
                 >
-                  <Check className="w-4 h-4 mr-2" />
-                  Continue
+                  {isUploading ? (
+                    <>
+                      <motion.div
+                        animate={{ rotate: 360 }}
+                        transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                        className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full"
+                      />
+                      Uploading...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="w-4 h-4 mr-2" />
+                      Continue
+                    </>
+                  )}
                 </Button>
               </div>
             </motion.div>

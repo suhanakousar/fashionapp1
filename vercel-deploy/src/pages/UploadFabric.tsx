@@ -19,17 +19,51 @@ export default function UploadFabric() {
   const [scale, setScale] = useState([100]);
   const [rotate, setRotate] = useState([0]);
   const [intensity, setIntensity] = useState([50]);
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadId, setUploadId] = useState<string | null>(null);
 
   const onDrop = useCallback(
-    (acceptedFiles: File[]) => {
+    async (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
       if (file) {
         setFile(file);
+        // Show preview immediately
         createImageUrl(file).then(setPreview);
-        toast({
-          title: "Fabric uploaded",
-          description: `${type === "top" ? "Top" : "Bottom"} fabric uploaded successfully`,
-        });
+        
+        // Upload to backend
+        setIsUploading(true);
+        try {
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('type', type === "top" ? 'top_fabric' : 'bottom_fabric');
+          
+          const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+          const response = await fetch(`${API_URL}/v1/upload`, {
+            method: 'POST',
+            body: formData,
+          });
+          
+          if (!response.ok) {
+            throw new Error('Upload failed');
+          }
+          
+          const result = await response.json();
+          setUploadId(result.upload._id);
+          
+          toast({
+            title: "Fabric uploaded",
+            description: `${type === "top" ? "Top" : "Bottom"} fabric uploaded and stored successfully`,
+          });
+        } catch (error) {
+          console.error("Upload error:", error);
+          toast({
+            title: "Upload failed",
+            description: "Failed to upload to server. File saved locally only.",
+            variant: "destructive",
+          });
+        } finally {
+          setIsUploading(false);
+        }
       }
     },
     [toast, type]
@@ -51,11 +85,15 @@ export default function UploadFabric() {
         rotate: rotate[0],
         intensity: intensity[0],
         type,
+        uploadId: uploadId, // Store upload ID for API calls
       };
       localStorage.setItem(
         `styleweave-fabric-${type}`,
         JSON.stringify(fabricData)
       );
+      if (uploadId) {
+        localStorage.setItem(`styleweave-fabric-${type}-upload-id`, uploadId);
+      }
       toast({
         title: "Fabric saved",
         description: "Fabric style saved successfully",
