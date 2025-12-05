@@ -1,261 +1,180 @@
-# StyleWeave Backend - Production Deployment Guide
+# 🚀 Deployment Guide
 
-> **Note**: For quick deployment to Vercel + Railway/Render, see `DEPLOYMENT_GUIDE.md` or `QUICK_DEPLOY.md`
-> 
-> This guide covers advanced deployment options (Docker, Kubernetes, AWS, GCP, Azure)
+This project is split into **3 separate deployments**:
 
-## Production Deployment Checklist
+## 📁 Project Structure
 
-### 1. Environment Configuration
-
-- [ ] Set strong `SECRET_KEY` (use `openssl rand -hex 32`)
-- [ ] Configure `CORS_ORIGINS` with specific domains
-- [ ] Set up MongoDB authentication
-- [ ] Use Redis with password authentication
-- [ ] Configure Cloudinary with production credentials
-- [ ] Set `ACCESS_TOKEN_EXPIRE_MINUTES` appropriately
-
-### 2. Security Hardening
-
-**API Security:**
-```python
-# In api/app.py, update CORS:
-allow_origins=["https://yourdomain.com"]  # Specific domains only
+```
+BuildEachAll245/
+├── vercel-deploy/     → Frontend (React + Vite) → Deploy to Vercel
+├── backend-deploy/    → Backend API (FastAPI) → Deploy to Railway/Render
+└── worker-deploy/     → ML Worker (Celery) → Deploy to GPU server
 ```
 
-**MongoDB:**
-- Enable authentication
-- Use connection string: `mongodb://user:pass@host:27017/styleweave?authSource=admin`
+---
 
-**Redis:**
-- Set password in redis.conf
-- Use connection string: `redis://:password@host:6379/0`
+## 1️⃣ Frontend → Vercel
 
-**Cloudinary:**
-- Use signed URLs for private images
-- Set up upload presets with size/format limits
-- Enable CDN for faster delivery
+### Quick Deploy
 
-### 3. Docker Production Build
+1. **Set Root Directory in Vercel Dashboard:**
+   - Go to: https://vercel.com/dashboard
+   - Select your project
+   - Settings → General → Root Directory
+   - Set to: `vercel-deploy`
+   - Save
 
-**Build images:**
-```bash
-docker build -f docker/Dockerfile.api -t styleweave-api:latest .
-docker build -f docker/Dockerfile.worker -t styleweave-worker:latest .
+2. **Add Environment Variable:**
+   - Settings → Environment Variables
+   - Add: `VITE_API_URL` = `https://your-backend.railway.app`
+   - (Replace with your actual backend URL)
+
+3. **Deploy:**
+   - Push to GitHub
+   - Vercel auto-deploys
+
+### What's Deployed
+- ✅ React frontend
+- ✅ Static assets
+- ❌ No Python/API code
+
+---
+
+## 2️⃣ Backend API → Railway (Recommended)
+
+### Quick Deploy
+
+1. **Push to GitHub** (backend-deploy folder)
+
+2. **Deploy on Railway:**
+   - Go to [railway.app](https://railway.app)
+   - New Project → Deploy from GitHub
+   - Select repository
+   - Railway auto-detects `railway.json`
+
+3. **Add Environment Variables:**
+   ```bash
+   MONGO_URI=mongodb+srv://...
+   CLOUDINARY_CLOUD_NAME=...
+   CLOUDINARY_API_KEY=...
+   CLOUDINARY_API_SECRET=...
+   CLOUDINARY_FOLDER=styleweave
+   CORS_ORIGINS=https://your-frontend.vercel.app
+   SECRET_KEY=your-secret-key
+   ```
+
+4. **Get Backend URL:**
+   - Railway provides: `https://your-app.railway.app`
+   - Use this in frontend `VITE_API_URL`
+
+### Alternative: Render
+
+1. Go to [render.com](https://render.com)
+2. New → Web Service
+3. Connect GitHub repo
+4. **Root Directory:** `backend-deploy`
+5. **Build Command:** (auto from Dockerfile)
+6. **Start Command:** `uvicorn api.app:app --host 0.0.0.0 --port $PORT`
+7. Add environment variables
+8. Deploy
+
+### What's Deployed
+- ✅ FastAPI backend
+- ✅ All API routes (`/v1/*`)
+- ✅ Health check (`/health`)
+- ✅ API docs (`/docs`)
+
+---
+
+## 3️⃣ ML Worker → GPU Server (Optional)
+
+The Celery worker requires GPU for AI/ML models. Deploy to:
+
+- **Google Cloud Run** (with GPU)
+- **AWS EC2** (g4dn instance)
+- **Paperspace Gradient**
+- **RunPod**
+
+See `worker-deploy/README.md` for details.
+
+---
+
+## 🔗 Connecting Frontend to Backend
+
+### After Backend Deployment:
+
+1. **Get your backend URL:**
+   - Railway: `https://your-app.railway.app`
+   - Render: `https://your-app.onrender.com`
+
+2. **Update Vercel Environment Variable:**
+   - Vercel Dashboard → Settings → Environment Variables
+   - `VITE_API_URL` = `https://your-backend.railway.app`
+
+3. **Redeploy frontend:**
+   - Vercel auto-redeploys on env var changes
+   - Or trigger manual redeploy
+
+### Frontend Code:
+
+The frontend uses `src/lib/api.ts` which automatically uses `VITE_API_URL`:
+
+```typescript
+import { api } from '@/lib/api';
+
+// Upload model
+const result = await api.uploadModel(file);
+
+// Generate outfit
+const outfit = await api.generateOutfit({ job_id, ... });
 ```
 
-**Tag for registry:**
-```bash
-docker tag styleweave-api:latest your-registry/styleweave-api:latest
-docker tag styleweave-worker:latest your-registry/styleweave-worker:latest
-```
+---
 
-**Push to registry:**
-```bash
-docker push your-registry/styleweave-api:latest
-docker push your-registry/styleweave-worker:latest
-```
+## ✅ Checklist
 
-### 4. Kubernetes Deployment (Optional)
+### Frontend (Vercel)
+- [ ] Root Directory set to `vercel-deploy`
+- [ ] `VITE_API_URL` environment variable set
+- [ ] Build succeeds
+- [ ] Frontend loads correctly
 
-**API Deployment:**
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: styleweave-api
-spec:
-  replicas: 3
-  template:
-    spec:
-      containers:
-      - name: api
-        image: your-registry/styleweave-api:latest
-        env:
-        - name: MONGO_URI
-          valueFrom:
-            secretKeyRef:
-              name: styleweave-secrets
-              key: mongo-uri
-        # ... other env vars from secrets
-```
+### Backend (Railway/Render)
+- [ ] All environment variables set
+- [ ] Backend deploys successfully
+- [ ] `/health` endpoint works
+- [ ] `/docs` shows API documentation
+- [ ] CORS allows frontend origin
 
-**Worker Deployment:**
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: styleweave-worker
-spec:
-  replicas: 2
-  template:
-    spec:
-      containers:
-      - name: worker
-        image: your-registry/styleweave-worker:latest
-        resources:
-          requests:
-            nvidia.com/gpu: 1
-          limits:
-            nvidia.com/gpu: 1
-```
+### Testing
+- [ ] Frontend can call backend API
+- [ ] Upload endpoints work
+- [ ] CORS errors resolved
 
-### 5. Scaling Considerations
+---
 
-**API Scaling:**
-- Use Gunicorn with multiple workers
-- Add load balancer (nginx, AWS ALB)
-- Scale horizontally based on CPU/memory
+## 🐛 Troubleshooting
 
-**Worker Scaling:**
-- Scale based on queue length
-- Monitor GPU utilization
-- Use auto-scaling based on queue depth
+### Frontend can't reach backend
+- ✅ Check `VITE_API_URL` is set correctly
+- ✅ Check backend CORS allows frontend origin
+- ✅ Check backend is deployed and running
 
-**Database:**
-- Use MongoDB replica sets
-- Enable sharding for large datasets
-- Regular backups
+### CORS Errors
+- ✅ Add frontend URL to backend `CORS_ORIGINS`
+- ✅ Format: `https://your-app.vercel.app` (no trailing slash)
 
-### 6. Monitoring
+### Build Failures
+- ✅ Check Root Directory in Vercel dashboard
+- ✅ Check all files are committed to Git
+- ✅ Check `vercel-deploy/package.json` exists
 
-**Metrics to Track:**
-- API response times
-- Job queue length
-- GPU utilization
-- Error rates
-- Cloudinary bandwidth usage
+---
 
-**Tools:**
-- Prometheus + Grafana
-- Sentry for error tracking
-- CloudWatch / Datadog
+## 📝 Notes
 
-### 7. Cost Optimization
+- **Frontend** = Static React app (Vercel)
+- **Backend** = Python FastAPI (Railway/Render)
+- **Worker** = GPU ML tasks (Separate server)
 
-**Preview Mode:**
-- Free tier (CPU-only)
-- Fast response times
-- No GPU costs
-
-**HD Renders:**
-- Charge per render
-- Use credits system
-- Rate limiting
-
-**Cloudinary:**
-- Use transformations for previews (cheaper)
-- Optimize image sizes
-- Set up CDN caching
-
-### 8. Backup Strategy
-
-**MongoDB:**
-```bash
-# Daily backups
-mongodump --uri="mongodb://..." --out=/backups/$(date +%Y%m%d)
-```
-
-**Cloudinary:**
-- Enable automatic backups
-- Export important images periodically
-
-### 9. Health Checks
-
-**API Health:**
-```bash
-curl https://api.styleweave.ai/health
-```
-
-**Worker Health:**
-- Monitor Celery worker status
-- Check queue processing rate
-- Alert on stuck jobs
-
-### 10. Rollback Plan
-
-**Version Tags:**
-```bash
-docker tag styleweave-api:latest styleweave-api:v1.0.0
-```
-
-**Quick Rollback:**
-```bash
-docker-compose down
-docker-compose up -d --no-deps api  # Rollback API only
-```
-
-## Cloud Provider Specific
-
-### AWS
-
-**ECS Deployment:**
-- Use ECS Fargate for API
-- Use ECS with EC2 (GPU instances) for workers
-- RDS for MongoDB (or DocumentDB)
-- ElastiCache for Redis
-
-**Lambda Alternative:**
-- API Gateway + Lambda for API
-- Batch for GPU workers
-
-### Google Cloud
-
-**GKE Deployment:**
-- Use GKE with GPU nodes
-- Cloud SQL for MongoDB (or Atlas)
-- Memorystore for Redis
-- Cloud Storage for model checkpoints
-
-### Azure
-
-**AKS Deployment:**
-- AKS with GPU node pools
-- Cosmos DB (MongoDB API)
-- Azure Cache for Redis
-- Azure Blob Storage for models
-
-## Environment Variables Reference
-
-```bash
-# Required
-MONGO_URI=mongodb://user:pass@host:27017/styleweave
-REDIS_URL=redis://:pass@host:6379/0
-CLOUDINARY_CLOUD_NAME=your_cloud
-CLOUDINARY_API_KEY=your_key
-CLOUDINARY_API_SECRET=your_secret
-SECRET_KEY=your-secret-key
-
-# Optional
-CLOUDINARY_FOLDER=styleweave
-CORS_ORIGINS=https://app.styleweave.ai
-ACCESS_TOKEN_EXPIRE_MINUTES=60
-CUDA_VISIBLE_DEVICES=0
-SAM_CHECKPOINT=/weights/sam_vit_h.pth
-SD_MODEL_ID=runwayml/stable-diffusion-inpainting
-```
-
-## Troubleshooting Production Issues
-
-### High Memory Usage
-- Reduce Celery concurrency
-- Enable model unloading between jobs
-- Use smaller SAM model (vit_b instead of vit_h)
-
-### Slow Job Processing
-- Check GPU availability
-- Monitor queue length
-- Scale workers horizontally
-- Optimize SD inference steps
-
-### API Timeouts
-- Increase timeout limits
-- Use async endpoints
-- Add request queuing
-- Scale API instances
-
-### Database Connection Issues
-- Check connection pool size
-- Verify MongoDB replica set health
-- Monitor connection count
-
+Each can be deployed independently! 🎉
