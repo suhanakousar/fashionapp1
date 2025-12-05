@@ -28,25 +28,25 @@ export default defineConfig({
     minify: "esbuild",
     rollupOptions: {
       input: path.resolve(__dirname, "index.html"),
-      // Don't define external - let Vite handle it automatically
-      onwarn() {
-        // Suppress ALL warnings completely - don't call warn() at all
-        // This prevents warnings from being logged and causing build failures
-        return;
+      output: {
+        manualChunks: undefined, // Let Vite handle chunking automatically
       },
-      treeshake: {
-        preset: 'recommended',
-        moduleSideEffects: (id) => {
-          // Don't tree-shake lucide-react
-          if (id.includes('lucide-react')) return true;
-          return false;
-        },
+      onwarn(warning, warn) {
+        // Only suppress externalization warnings, show others
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE' || 
+            warning.message.includes('externalize') ||
+            warning.message.includes('external module')) {
+          return;
+        }
+        warn(warning);
       },
     },
     commonjsOptions: {
       include: [/node_modules/],
       transformMixedEsModules: true,
     },
+    // Ensure proper chunking
+    chunkSizeWarningLimit: 1000,
   },
   optimizeDeps: {
     include: ["react", "react-dom", "react-router-dom", "framer-motion", "lucide-react"],

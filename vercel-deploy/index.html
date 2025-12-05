@@ -23,23 +23,40 @@
         }
       </style>
     </div>
-    <script type="module" src="/src/main.tsx"></script>
     <script>
-      // Diagnostic script to check if page loaded
-      console.log("HTML loaded at:", new Date().toISOString());
+      // Diagnostic script - runs immediately
+      console.log("🔍 HTML loaded at:", new Date().toISOString());
+      console.log("🔍 Root element exists:", !!document.getElementById("root"));
+      
+      // Check if script loads
+      window.addEventListener("load", function() {
+        console.log("🔍 Window loaded event fired");
+        setTimeout(function() {
+          const root = document.getElementById("root");
+          if (root && root.innerHTML.includes("Loading StyleWeave AI")) {
+            console.error("❌ App still showing loading screen after 2 seconds");
+            console.error("❌ This means React didn't mount");
+            root.innerHTML = `
+              <div style="padding: 40px; text-align: center; font-family: system-ui; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; background: linear-gradient(135deg, #4C1A4F 0%, #0A0E37 50%, #C8B7E3 100%); color: #E9D7A6;">
+                <h1 style="font-size: 2rem; margin-bottom: 1rem;">React Failed to Load</h1>
+                <p style="margin-bottom: 1rem; opacity: 0.9;">The JavaScript bundle may be incomplete or corrupted.</p>
+                <p style="margin-bottom: 1rem; opacity: 0.9; font-size: 0.9rem;">Check Vercel build logs for errors.</p>
+                <button onclick="window.location.reload()" style="padding: 12px 24px; background: #E9D7A6; color: #0A0E37; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; margin-top: 1rem;">
+                  Reload Page
+                </button>
+              </div>
+            `;
+          }
+        }, 2000);
+      });
+      
       window.addEventListener("error", function(e) {
-        console.error("Page error:", e.error);
-        document.getElementById("root").innerHTML = `
-          <div style="padding: 20px; text-align: center; font-family: system-ui;">
-            <h1 style="color: #4C1A4F;">JavaScript Error</h1>
-            <p style="color: #666;">Check browser console (F12) for details</p>
-            <pre style="background: #f5f5f5; padding: 10px; border-radius: 4px; text-align: left; max-width: 600px; margin: 20px auto;">
-              ${e.error ? e.error.message : 'Unknown error'}
-            </pre>
-          </div>
-        `;
+        console.error("❌ Global error:", e.error);
+        console.error("❌ Error message:", e.message);
+        console.error("❌ Error source:", e.filename, "line", e.lineno);
       });
     </script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
 
