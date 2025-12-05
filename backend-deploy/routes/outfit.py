@@ -12,12 +12,7 @@ import uuid
 import requests
 from typing import Optional
 
-# Add worker directory to path for imports
-_project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-_worker_path = os.path.join(_project_root, "worker-deploy")
-if _worker_path not in sys.path:
-    sys.path.insert(0, _worker_path)
-
+# Import worker tasks (now in same directory)
 from worker.tasks import generate_hd_task
 from worker.inference.texture_apply import apply_texture_preview
 

@@ -1,6 +1,11 @@
-# Backend API Deployment
+# Backend + Worker Deployment
 
-This folder contains the **FastAPI Backend** that should be deployed separately from the frontend.
+This folder contains the **FastAPI Backend** and **Celery Worker** combined in one deployment.
+
+**What's included:**
+- ✅ FastAPI backend (API routes)
+- ✅ Celery worker (ML/AI background tasks)
+- ✅ All in one deployment (simpler!)
 
 ## 🚀 Quick Deploy
 
@@ -24,7 +29,7 @@ This folder contains the **FastAPI Backend** that should be deployed separately 
    - **Root Directory**: `backend-deploy`
    - **Environment**: `Python 3`
    - **Build Command**: `pip install -r requirements.txt`
-   - **Start Command**: `uvicorn app:app --host 0.0.0.0 --port $PORT`
+   - **Start Command**: `python start.py` (runs both FastAPI and Celery worker)
 5. **Environment Variables** (click "Add Environment Variable" for each):
    ```
    MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/styleweave
@@ -60,6 +65,9 @@ gcloud run deploy backend \
 # MongoDB
 MONGO_URI=mongodb+srv://user:pass@cluster.mongodb.net/styleweave
 
+# Redis (for Celery worker task queue)
+REDIS_URL=redis://:password@host:6379/0
+
 # Cloudinary
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
@@ -73,6 +81,8 @@ CORS_ORIGINS=https://your-frontend.vercel.app
 SECRET_KEY=your-secret-key
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
+
+**Note**: You need to add a **Redis service** (Railway/Render provides this) for the Celery worker to work.
 
 ## 📁 Project Structure
 

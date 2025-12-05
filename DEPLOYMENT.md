@@ -40,7 +40,9 @@ BuildEachAll245/
 
 ---
 
-## 2️⃣ Backend API → Railway (Recommended)
+## 2️⃣ Backend + Worker → Railway/Render (Combined!)
+
+**Now combined!** Backend API and Celery worker run together in one deployment.
 
 ### Quick Deploy
 
@@ -52,9 +54,14 @@ BuildEachAll245/
    - Select repository
    - Railway auto-detects `railway.json`
 
-3. **Add Environment Variables:**
+3. **Add Redis Service:**
+   - In Railway dashboard, click **"+ New"** → **"Database"** → **"Add Redis"**
+   - Copy the `REDIS_URL` (will be auto-added to environment)
+
+4. **Add Environment Variables:**
    ```bash
    MONGO_URI=mongodb+srv://...
+   REDIS_URL=redis://... (from Railway Redis service)
    CLOUDINARY_CLOUD_NAME=...
    CLOUDINARY_API_KEY=...
    CLOUDINARY_API_SECRET=...
@@ -63,7 +70,7 @@ BuildEachAll245/
    SECRET_KEY=your-secret-key
    ```
 
-4. **Get Backend URL:**
+5. **Get Backend URL:**
    - Railway provides: `https://your-app.railway.app`
    - Use this in frontend `VITE_API_URL`
 
@@ -80,29 +87,24 @@ BuildEachAll245/
 
 ### What's Deployed
 - ✅ FastAPI backend
+- ✅ Celery worker (ML/AI background tasks)
 - ✅ All API routes (`/v1/*`)
 - ✅ Health check (`/health`)
 - ✅ API docs (`/docs`)
+- ✅ Background job processing
 
 ---
 
-## 3️⃣ ML Worker → GPU Server (Optional)
+## 3️⃣ ML Worker → Already Included! ✅
 
-The Celery worker handles ML/AI inference tasks. Deploy to:
+**Good news!** The Celery worker is now **combined with the backend** in `backend-deploy/`.
 
-### Quick Options:
-- **Railway** (easiest, but no GPU on free tier)
-- **Render** (background worker, no GPU on free tier)
-- **Google Cloud Run** (with GPU, pay per use)
-- **RunPod** (GPU cloud, ~$0.30/hour)
-- **Paperspace Gradient** (GPU notebooks)
+You only need to:
+1. ✅ Deploy backend (worker included automatically)
+2. ✅ Add Redis service (for task queue)
+3. ✅ That's it!
 
-### Important:
-- ⚠️ **Requires Redis** for task queue
-- ⚠️ **Requires GPU** for optimal performance (optional - CPU works but slow)
-- ⚠️ **Optional** - App works without worker, but ML features won't function
-
-See `WORKER_DEPLOY.md` for detailed deployment instructions.
+**Note**: For GPU support, you may need to deploy separately or upgrade your plan. See `WORKER_DEPLOY.md` for GPU deployment options.
 
 ---
 

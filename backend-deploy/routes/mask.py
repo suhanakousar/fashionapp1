@@ -10,12 +10,7 @@ import os
 import sys
 from typing import Optional
 
-# Add worker directory to path for imports
-_project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-_worker_path = os.path.join(_project_root, "worker-deploy")
-if _worker_path not in sys.path:
-    sys.path.insert(0, _worker_path)
-
+# Import worker inference (now in same directory)
 from worker.inference.sam_segmentation import run_sam_on_image_from_url
 
 router = APIRouter()
