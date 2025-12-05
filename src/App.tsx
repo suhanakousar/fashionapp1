@@ -9,6 +9,7 @@ import FabricApply from "./pages/FabricApply";
 import FabricLibrary from "./pages/FabricLibrary";
 import FinalOutput from "./pages/FinalOutput";
 import Settings from "./pages/Settings";
+import { Toaster } from "./components/ui/toaster";
 
 function App() {
   const [hasSeenOnboarding, setHasSeenOnboarding] = useState(false);
@@ -31,30 +32,33 @@ function App() {
   }
 
   return (
-    <Routes>
-      <Route
-        path="/"
-        element={
-          hasSeenOnboarding ? (
-            <Navigate to="/home" replace />
-          ) : (
-            <Onboarding onComplete={() => setHasSeenOnboarding(true)} />
-          )
-        }
-      />
-      <Route path="/home" element={<Home />} />
-      <Route path="/upload/model" element={<UploadModel />} />
-      <Route path="/upload/fabric/top" element={<UploadFabric type="top" />} />
-      <Route
-        path="/upload/fabric/bottom"
-        element={<UploadFabric type="bottom" />}
-      />
-      <Route path="/mask-detection" element={<MaskDetection />} />
-      <Route path="/fabric-apply" element={<FabricApply />} />
-      <Route path="/fabric-library" element={<FabricLibrary />} />
-      <Route path="/final-output" element={<FinalOutput />} />
-      <Route path="/settings" element={<Settings />} />
-    </Routes>
+    <>
+      <Routes>
+        <Route
+          path="/"
+          element={
+            hasSeenOnboarding ? (
+              <Navigate to="/home" replace />
+            ) : (
+              <Onboarding onComplete={() => setHasSeenOnboarding(true)} />
+            )
+          }
+        />
+        <Route path="/home" element={<Home />} />
+        <Route path="/upload/model" element={<UploadModel />} />
+        <Route path="/upload/fabric/top" element={<UploadFabric type="top" />} />
+        <Route
+          path="/upload/fabric/bottom"
+          element={<UploadFabric type="bottom" />}
+        />
+        <Route path="/mask-detection" element={<MaskDetection />} />
+        <Route path="/fabric-apply" element={<FabricApply />} />
+        <Route path="/fabric-library" element={<FabricLibrary />} />
+        <Route path="/final-output" element={<FinalOutput />} />
+        <Route path="/settings" element={<Settings />} />
+      </Routes>
+      <Toaster />
+    </>
   );
 }
 
