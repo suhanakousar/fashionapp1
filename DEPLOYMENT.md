@@ -88,14 +88,21 @@ BuildEachAll245/
 
 ## 3️⃣ ML Worker → GPU Server (Optional)
 
-The Celery worker requires GPU for AI/ML models. Deploy to:
+The Celery worker handles ML/AI inference tasks. Deploy to:
 
-- **Google Cloud Run** (with GPU)
-- **AWS EC2** (g4dn instance)
-- **Paperspace Gradient**
-- **RunPod**
+### Quick Options:
+- **Railway** (easiest, but no GPU on free tier)
+- **Render** (background worker, no GPU on free tier)
+- **Google Cloud Run** (with GPU, pay per use)
+- **RunPod** (GPU cloud, ~$0.30/hour)
+- **Paperspace Gradient** (GPU notebooks)
 
-See `worker-deploy/README.md` for details.
+### Important:
+- ⚠️ **Requires Redis** for task queue
+- ⚠️ **Requires GPU** for optimal performance (optional - CPU works but slow)
+- ⚠️ **Optional** - App works without worker, but ML features won't function
+
+See `WORKER_DEPLOY.md` for detailed deployment instructions.
 
 ---
 
