@@ -22,6 +22,18 @@ const viteConfig = {
     outDir: 'dist',
     sourcemap: false,
     minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined,
+      },
+    },
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
+  },
+  optimizeDeps: {
+    include: ['framer-motion', 'react', 'react-dom'],
   },
 };
 
@@ -31,6 +43,10 @@ try {
   process.exit(0);
 } catch (error) {
   console.error('Build failed:', error);
+  console.error('Error details:', error.message);
+  if (error.stack) {
+    console.error('Stack:', error.stack);
+  }
   process.exit(1);
 }
 
