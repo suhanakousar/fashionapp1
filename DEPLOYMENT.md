@@ -7,8 +7,7 @@ This project is split into **3 separate deployments**:
 ```
 BuildEachAll245/
 ├── vercel-deploy/     → Frontend (React + Vite) → Deploy to Vercel
-├── backend-deploy/    → Backend API (FastAPI) → Deploy to Railway/Render
-└── worker-deploy/     → ML Worker (Celery) → Deploy to GPU server
+└── backend-deploy/    → Backend + Worker (FastAPI + Celery) → Deploy to Railway/Render
 ```
 
 ---

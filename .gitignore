@@ -77,7 +77,6 @@ Thumbs.db
 vercel-deploy/dist/
 vercel-deploy/node_modules/
 vercel-deploy/__pycache__/
-worker-deploy/__pycache__/
 backend-deploy/__pycache__/
 backend-deploy/.env
 
