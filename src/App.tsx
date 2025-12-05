@@ -16,15 +16,34 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const seen = localStorage.getItem("styleweave-onboarding-seen");
-    setHasSeenOnboarding(seen === "true");
-    setIsLoading(false);
+    try {
+      const seen = typeof window !== "undefined" 
+        ? localStorage.getItem("styleweave-onboarding-seen")
+        : null;
+      setHasSeenOnboarding(seen === "true");
+    } catch (error) {
+      console.error("Error accessing localStorage:", error);
+      setHasSeenOnboarding(false);
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-royal-plum via-midnight-indigo to-opal-lavender">
-        <div className="text-4xl font-semibold text-gold-soft animate-pulse">
+      <div style={{ 
+        display: "flex", 
+        alignItems: "center", 
+        justifyContent: "center", 
+        minHeight: "100vh",
+        background: "linear-gradient(135deg, #4C1A4F 0%, #0A0E37 50%, #C8B7E3 100%)"
+      }}>
+        <div style={{ 
+          fontSize: "2rem", 
+          fontWeight: 600, 
+          color: "#E9D7A6",
+          animation: "pulse 2s infinite"
+        }}>
           StyleWeave AI
         </div>
       </div>

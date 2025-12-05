@@ -42,7 +42,13 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
-      localStorage.setItem("styleweave-onboarding-seen", "true");
+      try {
+        if (typeof window !== "undefined") {
+          localStorage.setItem("styleweave-onboarding-seen", "true");
+        }
+      } catch (error) {
+        console.error("Error saving to localStorage:", error);
+      }
       onComplete();
     }
   };
