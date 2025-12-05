@@ -21,11 +21,15 @@ try {
       alias: {
         '@': path.resolve(__dirname, './src'),
       },
+      extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
     },
     build: {
       outDir: 'dist',
       sourcemap: false,
       minify: 'esbuild',
+      rollupOptions: {
+        input: path.resolve(__dirname, 'index.html'),
+      },
     },
   };
 
