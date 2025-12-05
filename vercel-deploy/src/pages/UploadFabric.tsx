@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import * as LucideIcons from "lucide-react";
 const { ArrowLeft, Upload, X, Check, RotateCw } = LucideIcons;
-import { createImageUrl } from "@/lib/utils";
+import { createImageUrl } from "../lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function UploadFabric() {

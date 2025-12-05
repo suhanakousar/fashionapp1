@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import * as LucideIcons from "lucide-react";
 const { ArrowLeft, Upload, X, Check } = LucideIcons;
-import { createImageUrl } from "@/lib/utils";
+import { createImageUrl } from "../lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 
 export default function UploadModel() {
