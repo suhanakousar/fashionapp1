@@ -7,7 +7,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react({
+      jsxRuntime: "automatic",
+    }),
+  ],
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
@@ -24,6 +28,12 @@ export default defineConfig({
     minify: "esbuild",
     rollupOptions: {
       input: path.resolve(__dirname, "index.html"),
+      onwarn(warning, warn) {
+        // Suppress specific warnings
+        if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return;
+        if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+        warn(warning);
+      },
     },
     commonjsOptions: {
       include: [/node_modules/],
@@ -32,5 +42,8 @@ export default defineConfig({
   },
   optimizeDeps: {
     include: ["react", "react-dom", "react-router-dom", "framer-motion", "lucide-react"],
+    esbuildOptions: {
+      target: "es2020",
+    },
   },
 });
