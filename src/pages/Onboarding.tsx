@@ -1,7 +1,8 @@
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Sparkles, Upload, Wand2, ArrowRight } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+const { Sparkles, Upload, Wand2, ArrowRight } = LucideIcons;
 
 interface OnboardingProps {
   onComplete: () => void;

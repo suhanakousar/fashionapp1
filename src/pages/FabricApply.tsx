@@ -4,15 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
-import {
-  ArrowLeft,
-  Download,
-  Save,
-  Share2,
-  RefreshCw,
-  Compare,
-  Sparkles,
-} from "lucide-react";
+import * as LucideIcons from "lucide-react";
+const { ArrowLeft, Download, Save, Share2, RefreshCw, Compare, Sparkles } = LucideIcons;
 import { useToast } from "@/components/ui/use-toast";
 
 export default function FabricApply() {

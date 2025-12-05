@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus, Shirt } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+const { ArrowLeft, Plus, Shirt } = LucideIcons;
 
 const fabricCategories = [
   {

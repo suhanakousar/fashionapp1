@@ -4,7 +4,8 @@ import { useDropzone } from "react-dropzone";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Upload, X, Check } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+const { ArrowLeft, Upload, X, Check } = LucideIcons;
 import { createImageUrl } from "@/lib/utils";
 import { useToast } from "@/components/ui/use-toast";
 

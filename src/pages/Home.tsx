@@ -2,15 +2,8 @@ import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import {
-  Upload,
-  Shirt,
-  Sparkles,
-  Bell,
-  User,
-  Image as ImageIcon,
-  ArrowRight,
-} from "lucide-react";
+import * as LucideIcons from "lucide-react";
+const { Upload, Shirt, Sparkles, Bell, User, Image: ImageIcon, ArrowRight } = LucideIcons;
 import { useState } from "react";
 
 export default function Home() {

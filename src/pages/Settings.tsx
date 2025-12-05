@@ -2,17 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  ArrowLeft,
-  User,
-  Image as ImageIcon,
-  Palette,
-  Settings as SettingsIcon,
-  HardDrive,
-  HelpCircle,
-  LogOut,
-  Zap,
-} from "lucide-react";
+import * as LucideIcons from "lucide-react";
+const { ArrowLeft, User, Image: ImageIcon, Palette, Settings: SettingsIcon, HardDrive, HelpCircle, LogOut, Zap } = LucideIcons;
 
 export default function Settings() {
   const navigate = useNavigate();

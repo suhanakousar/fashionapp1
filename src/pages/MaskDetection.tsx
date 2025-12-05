@@ -4,15 +4,8 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import {
-  ArrowLeft,
-  Check,
-  Edit,
-  RotateCcw,
-  Sparkles,
-  ZoomIn,
-  ZoomOut,
-} from "lucide-react";
+import * as LucideIcons from "lucide-react";
+const { ArrowLeft, Check, Edit, RotateCcw, Sparkles, ZoomIn, ZoomOut } = LucideIcons;
 
 export default function MaskDetection() {
   const navigate = useNavigate();

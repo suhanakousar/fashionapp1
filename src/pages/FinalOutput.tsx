@@ -2,7 +2,8 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Download, Edit, Home, Star, Sparkles } from "lucide-react";
+import * as LucideIcons from "lucide-react";
+const { Download, Edit, Home, Star, Sparkles } = LucideIcons;
 import { useState } from "react";
 
 export default function FinalOutput() {
