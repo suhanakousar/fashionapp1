@@ -11,6 +11,8 @@ if (!rootElement) {
   throw new Error("Root element not found");
 }
 
+console.log("Starting React app...");
+
 try {
   ReactDOM.createRoot(rootElement).render(
     <React.StrictMode>
@@ -21,6 +23,7 @@ try {
       </ErrorBoundary>
     </React.StrictMode>
   );
+  console.log("React app rendered successfully");
 } catch (error) {
   console.error("Failed to render app:", error);
   rootElement.innerHTML = `
