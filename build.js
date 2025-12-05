@@ -28,17 +28,7 @@ try {
       minify: 'esbuild',
       rollupOptions: {
         input: pathModule.resolve(__dirname, 'index.html'),
-        output: {
-          manualChunks: undefined,
-        },
       },
-      commonjsOptions: {
-        include: [/node_modules/],
-        transformMixedEsModules: true,
-      },
-    },
-    optimizeDeps: {
-      include: ['react', 'react-dom', 'react-router-dom', 'framer-motion', 'lucide-react'],
     },
   };
 

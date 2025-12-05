@@ -25,5 +25,12 @@ export default defineConfig({
     rollupOptions: {
       input: path.resolve(__dirname, "index.html"),
     },
+    commonjsOptions: {
+      include: [/node_modules/],
+      transformMixedEsModules: true,
+    },
+  },
+  optimizeDeps: {
+    include: ["react", "react-dom", "react-router-dom", "framer-motion", "lucide-react"],
   },
 });
