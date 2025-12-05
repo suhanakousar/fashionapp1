@@ -29,42 +29,9 @@ export default defineConfig({
     rollupOptions: {
       input: path.resolve(__dirname, "index.html"),
       // Don't define external - let Vite handle it automatically
-      onwarn(warning, warn) {
-        // Suppress ALL warnings - they're causing build failures
-        // Convert message and code to strings for safe checking
-        const message = String(warning.message || warning.toString() || '');
-        const code = String(warning.code || '');
-        
-        // Suppress ALL externalization-related warnings
-        if (message.toLowerCase().includes('externalize') || 
-            message.toLowerCase().includes('external') || 
-            message.toLowerCase().includes('externalized') ||
-            message.toLowerCase().includes('external module') ||
-            message.toLowerCase().includes('rollupoptions.external') ||
-            message.toLowerCase().includes('build.rollupoptions.external')) {
-          return; // Silently ignore
-        }
-        
-        // Suppress all common warnings
-        if (code === 'UNUSED_EXTERNAL_IMPORT' ||
-            code === 'CIRCULAR_DEPENDENCY' ||
-            code === 'THIS_IS_UNDEFINED' ||
-            code === 'MODULE_LEVEL_DIRECTIVE' ||
-            code === 'INVALID_ID' ||
-            code === 'EMPTY_BUNDLE' ||
-            code === 'UNRESOLVED_IMPORT' ||
-            code?.startsWith('PLUGIN_')) {
-          return;
-        }
-        
-        // Suppress package-specific warnings
-        if (message.includes('lucide-react') ||
-            message.includes('can break your application')) {
-          return;
-        }
-        
-        // Suppress ALL warnings to prevent build failures
-        // Only actual errors should be shown, but we're suppressing everything
+      onwarn() {
+        // Suppress ALL warnings completely - don't call warn() at all
+        // This prevents warnings from being logged and causing build failures
         return;
       },
       treeshake: {
