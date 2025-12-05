@@ -2,8 +2,8 @@
 Upload route - handles image uploads (model, top_fabric, bottom_fabric)
 """
 from fastapi import APIRouter, File, UploadFile, Form, HTTPException
-from api.core.cloudinary_utils import upload_file_to_cloudinary
-from api.core.mongo import db
+from core.cloudinary_utils import upload_file_to_cloudinary
+from core.mongo import db
 from datetime import datetime
 import uuid
 import os

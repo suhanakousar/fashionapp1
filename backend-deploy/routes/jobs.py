@@ -2,7 +2,7 @@
 Job status route - check status of background jobs
 """
 from fastapi import APIRouter, HTTPException
-from api.core.mongo import db
+from core.mongo import db
 from bson import ObjectId
 from typing import Optional
 

@@ -12,15 +12,15 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
-COPY api/requirements.txt /app/requirements.txt
+COPY requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
-# Copy API code
-COPY api /app/api
+# Copy all backend code
+COPY . /app
 
 # Expose port
 EXPOSE 8000
 
-# Run uvicorn - import from api.app
-CMD ["uvicorn", "api.app:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run uvicorn - import from app
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000"]
 

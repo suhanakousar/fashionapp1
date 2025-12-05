@@ -2,8 +2,8 @@
 Mask generation route - generates segmentation masks using SAM/SlimSAM
 """
 from fastapi import APIRouter, HTTPException, Body
-from api.core.mongo import db
-from api.core.cloudinary_utils import upload_file_to_cloudinary
+from core.mongo import db
+from core.cloudinary_utils import upload_file_to_cloudinary
 from bson import ObjectId
 from datetime import datetime
 import os
@@ -12,7 +12,7 @@ from typing import Optional
 
 # Add worker directory to path for imports
 _project_root = os.path.dirname(os.path.dirname(os.path.dirname(__file__)))
-_worker_path = os.path.join(_project_root, "worker")
+_worker_path = os.path.join(_project_root, "worker-deploy")
 if _worker_path not in sys.path:
     sys.path.insert(0, _worker_path)
 

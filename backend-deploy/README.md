@@ -58,6 +58,27 @@ SECRET_KEY=your-secret-key
 ACCESS_TOKEN_EXPIRE_MINUTES=60
 ```
 
+## 📁 Project Structure
+
+All backend code is in one folder:
+```
+backend-deploy/
+├── app.py              # Main FastAPI application
+├── requirements.txt    # Python dependencies
+├── routes/             # API route handlers
+│   ├── upload.py
+│   ├── mask.py
+│   ├── outfit.py
+│   └── jobs.py
+├── core/               # Core utilities
+│   ├── mongo.py
+│   ├── cloudinary_utils.py
+│   └── security.py
+├── schemas.py          # Pydantic schemas
+├── Dockerfile          # Container config
+└── railway.json        # Railway deployment config
+```
+
 ## 🔗 API Endpoints
 
 After deployment, your API will be available at:
