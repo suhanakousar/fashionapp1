@@ -4,7 +4,6 @@
   "devCommand": "cd vercel-deploy && npm run dev",
   "installCommand": "cd vercel-deploy && npm install",
   "framework": "vite",
-  "rootDirectory": "vercel-deploy",
   "rewrites": [
     {
       "source": "/v1/(.*)",
