@@ -60,25 +60,29 @@ export default function Onboarding({ onComplete }: OnboardingProps) {
     <div className="min-h-screen bg-gradient-to-br from-royal-plum via-midnight-indigo to-opal-lavender flex items-center justify-center p-4 relative overflow-hidden">
       {/* Animated background particles */}
       <div className="absolute inset-0 overflow-hidden">
-        {[...Array(20)].map((_, i) => (
-          <motion.div
-            key={i}
-            className="absolute w-2 h-2 bg-gold-soft/30 rounded-full"
-            initial={{
-              x: Math.random() * window.innerWidth,
-              y: Math.random() * window.innerHeight,
-            }}
-            animate={{
-              y: [null, Math.random() * window.innerHeight],
-              x: [null, Math.random() * window.innerWidth],
-            }}
-            transition={{
-              duration: Math.random() * 10 + 10,
-              repeat: Infinity,
-              repeatType: "reverse",
-            }}
-          />
-        ))}
+        {[...Array(20)].map((_, i) => {
+          const width = typeof window !== "undefined" ? window.innerWidth : 1920;
+          const height = typeof window !== "undefined" ? window.innerHeight : 1080;
+          return (
+            <motion.div
+              key={i}
+              className="absolute w-2 h-2 bg-gold-soft/30 rounded-full"
+              initial={{
+                x: Math.random() * width,
+                y: Math.random() * height,
+              }}
+              animate={{
+                y: [null, Math.random() * height],
+                x: [null, Math.random() * width],
+              }}
+              transition={{
+                duration: Math.random() * 10 + 10,
+                repeat: Infinity,
+                repeatType: "reverse",
+              }}
+            />
+          );
+        })}
       </div>
 
       <div className="relative z-10 max-w-2xl w-full">
