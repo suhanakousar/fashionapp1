@@ -38,16 +38,24 @@ export default function UploadFabric() {
           formData.append('type', type === "top" ? 'top_fabric' : 'bottom_fabric');
           
           const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+          console.log('Uploading to:', `${API_URL}/v1/upload`);
+          console.log('API URL from env:', import.meta.env.VITE_API_URL);
+          
           const response = await fetch(`${API_URL}/v1/upload`, {
             method: 'POST',
             body: formData,
           });
           
+          console.log('Upload response status:', response.status);
+          
           if (!response.ok) {
-            throw new Error('Upload failed');
+            const errorText = await response.text();
+            console.error('Upload failed:', errorText);
+            throw new Error(`Upload failed: ${response.status} - ${errorText}`);
           }
           
           const result = await response.json();
+          console.log('Upload success:', result);
           setUploadId(result.upload._id);
           
           toast({
