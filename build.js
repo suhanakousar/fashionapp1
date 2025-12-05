@@ -3,26 +3,29 @@
  * Build script that runs vite programmatically
  * This avoids permission issues with the vite binary
  */
-import { build, loadConfigFromFile } from 'vite';
+import { build } from 'vite';
 import { fileURLToPath } from 'url';
 import { dirname, resolve } from 'path';
+import react from '@vitejs/plugin-react';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-try {
-  // Try to load vite.config.ts
-  const configResult = await loadConfigFromFile(
-    { command: 'build', mode: 'production' },
-    resolve(__dirname, 'vite.config.ts')
-  );
-  
-  const viteConfig = configResult?.config || {
-    build: {
-      outDir: 'dist',
+const viteConfig = {
+  plugins: [react()],
+  resolve: {
+    alias: {
+      '@': resolve(__dirname, './src'),
     },
-  };
+  },
+  build: {
+    outDir: 'dist',
+    sourcemap: false,
+    minify: 'esbuild',
+  },
+};
 
+try {
   await build(viteConfig);
   console.log('Build completed successfully!');
   process.exit(0);
