@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ArrowLeft, Plus, Shirt, ShirtIcon } from "lucide-react";
+import { ArrowLeft, Plus, Shirt } from "lucide-react";
 
 const fabricCategories = [
   {
@@ -135,7 +135,7 @@ export default function FabricLibrary() {
                       variant="outline"
                       onClick={() => navigate("/upload/fabric/bottom")}
                     >
-                      <ShirtIcon className="w-4 h-4 mr-2" />
+                      <Shirt className="w-4 h-4 mr-2" />
                       Apply to Bottom
                     </Button>
                   </div>

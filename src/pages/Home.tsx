@@ -5,7 +5,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import {
   Upload,
   Shirt,
-  ShirtIcon,
   Sparkles,
   Bell,
   User,
@@ -147,7 +146,7 @@ export default function Home() {
             >
               <CardContent className="p-8 text-center space-y-4">
                 <div className="w-20 h-20 mx-auto rounded-2xl bg-gradient-to-br from-gold-soft to-opal-lavender flex items-center justify-center">
-                  <ShirtIcon className="w-10 h-10 text-midnight-indigo" />
+                  <Shirt className="w-10 h-10 text-midnight-indigo" />
                 </div>
                 <h3 className="text-xl font-semibold text-royal-plum">
                   Bottom Fabric
