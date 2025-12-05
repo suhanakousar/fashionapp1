@@ -247,9 +247,23 @@ export default function UploadFabric() {
                     variant="default"
                     onClick={handleSave}
                     className="w-full"
+                    disabled={isUploading}
                   >
-                    <Check className="w-4 h-4 mr-2" />
-                    Save Fabric Style
+                    {isUploading ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-4 h-4 mr-2 border-2 border-white border-t-transparent rounded-full"
+                        />
+                        Uploading...
+                      </>
+                    ) : (
+                      <>
+                        <Check className="w-4 h-4 mr-2" />
+                        Save Fabric Style
+                      </>
+                    )}
                   </Button>
                 </>
               ) : (
