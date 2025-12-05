@@ -3,58 +3,57 @@
 ## Directory Tree
 
 ```
-styleweave/
-├── api/                          # FastAPI application
-│   ├── __init__.py
-│   ├── app.py                    # Main FastAPI app
-│   ├── schemas.py                # Pydantic models
-│   ├── requirements.txt          # Python dependencies
-│   ├── routes/                   # API endpoints
+BuildEachAll245/
+├── vercel-deploy/               # Frontend + API (deploy to Vercel)
+│   ├── api/                    # FastAPI application
 │   │   ├── __init__.py
-│   │   ├── upload.py            # Image upload endpoint
-│   │   ├── mask.py               # Mask generation endpoint
-│   │   ├── outfit.py             # Preview & HD generation
-│   │   └── jobs.py               # Job status endpoint
-│   └── core/                     # Core utilities
-│       ├── __init__.py
-│       ├── cloudinary_utils.py   # Cloudinary integration
-│       ├── mongo.py              # MongoDB connection
-│       └── security.py           # JWT & auth helpers
+│   │   ├── app.py              # Main FastAPI app
+│   │   ├── index.py             # Vercel serverless entry
+│   │   ├── schemas.py           # Pydantic models
+│   │   ├── requirements.txt     # Python dependencies
+│   │   ├── routes/               # API endpoints
+│   │   │   ├── upload.py        # Image upload endpoint
+│   │   │   ├── mask.py          # Mask generation endpoint
+│   │   │   ├── outfit.py        # Preview & HD generation
+│   │   │   └── jobs.py          # Job status endpoint
+│   │   └── core/                # Core utilities
+│   │       ├── cloudinary_utils.py
+│   │       ├── mongo.py
+│   │       └── security.py
+│   ├── src/                     # React frontend
+│   ├── vercel.json              # Vercel configuration
+│   └── package.json
 │
-├── worker/                       # Celery worker
-│   ├── __init__.py
-│   ├── tasks.py                 # Celery task definitions
-│   ├── requirements.txt         # Worker dependencies
-│   └── inference/               # AI inference modules
-│       ├── __init__.py
-│       ├── sam_segmentation.py  # SAM mask generation
-│       ├── texture_apply.py     # OpenCV texture application
-│       └── inpaint_sd.py        # Stable Diffusion inpainting
+├── worker-deploy/               # Worker (deploy to Railway/Render)
+│   ├── worker/                  # Celery worker
+│   │   ├── __init__.py
+│   │   ├── tasks.py             # Celery task definitions
+│   │   ├── requirements.txt     # Worker dependencies
+│   │   └── inference/           # AI inference modules
+│   │       ├── sam_segmentation.py
+│   │       ├── texture_apply.py
+│   │       └── inpaint_sd.py
+│   ├── Dockerfile               # GPU version
+│   └── Dockerfile.cpu           # CPU version
 │
 ├── docker/                       # Docker configuration
-│   ├── Dockerfile.api           # API container
-│   ├── Dockerfile.worker        # GPU worker container
-│   ├── Dockerfile.worker.cpu    # CPU worker container
-│   ├── docker-compose.yml       # Full stack (GPU)
-│   └── docker-compose.cpu.yml   # Full stack (CPU)
+│   ├── Dockerfile.api
+│   ├── Dockerfile.worker
+│   ├── Dockerfile.worker.cpu
+│   ├── docker-compose.yml
+│   └── docker-compose.cpu.yml
 │
 ├── tests/                        # Test suite
-│   ├── __init__.py
-│   ├── conftest.py              # Pytest fixtures
-│   ├── test_upload.py           # Upload tests
-│   ├── test_mask.py             # Mask generation tests
-│   └── test_integration.py      # Integration tests
+│   ├── conftest.py
+│   ├── test_upload.py
+│   ├── test_mask.py
+│   └── test_integration.py
 │
 ├── notebooks/                    # Jupyter notebooks
-│   └── README.md                # Notebook documentation
 │
-├── .env.example                 # Environment template
-├── .gitignore                   # Git ignore rules
-├── pytest.ini                   # Pytest configuration
-├── README.md                    # Main documentation
-├── SETUP.md                     # Setup instructions
-├── DEPLOYMENT.md                # Deployment guide
-└── PROJECT_STRUCTURE.md         # This file
+├── .env.example
+├── README.md
+└── PROJECT_STRUCTURE.md          # This file
 ```
 
 ## File Descriptions

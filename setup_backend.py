@@ -28,7 +28,7 @@ def main():
     
     # Setup API
     print("📦 Installing API dependencies...")
-    if not run_command(f"{sys.executable} -m pip install -r requirements.txt", cwd="api"):
+    if not run_command(f"{sys.executable} -m pip install -r requirements.txt", cwd="vercel-deploy/api"):
         print("❌ Failed to install API dependencies")
         return
     print("✓ API dependencies installed\n")
@@ -36,7 +36,7 @@ def main():
     # Setup Worker (optional - requires GPU for full functionality)
     print("📦 Installing Worker dependencies...")
     print("⚠️  Note: Worker requires GPU and SAM checkpoint for full functionality")
-    if not run_command(f"{sys.executable} -m pip install -r requirements.txt", cwd="worker"):
+    if not run_command(f"{sys.executable} -m pip install -r requirements.txt", cwd="worker-deploy/worker"):
         print("⚠️  Worker dependencies installation had issues (this is OK for preview-only mode)")
     else:
         print("✓ Worker dependencies installed\n")
@@ -54,7 +54,7 @@ def main():
     print("Next steps:")
     print("1. Edit .env with your Cloudinary, MongoDB, and Redis credentials")
     print("2. Start MongoDB and Redis (or use Docker)")
-    print("3. Run: cd api && uvicorn app:app --reload")
+    print("3. Run: cd vercel-deploy/api && uvicorn app:app --reload")
     print("4. Visit: http://localhost:8000/docs")
 
 if __name__ == "__main__":

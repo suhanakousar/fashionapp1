@@ -65,7 +65,7 @@ open http://localhost:8000/docs
 
 **API:**
 ```bash
-cd api
+cd vercel-deploy/api
 python -m venv venv
 source venv/bin/activate  # On Windows: venv\Scripts\activate
 pip install -r requirements.txt
@@ -73,7 +73,7 @@ pip install -r requirements.txt
 
 **Worker:**
 ```bash
-cd worker
+cd worker-deploy/worker
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
@@ -94,14 +94,14 @@ redis-server
 
 **Terminal 3 - API:**
 ```bash
-cd api
+cd vercel-deploy/api
 source venv/bin/activate
 uvicorn app:app --reload
 ```
 
 **Terminal 4 - Worker:**
 ```bash
-cd worker
+cd worker-deploy/worker
 source venv/bin/activate
 celery -A tasks worker --loglevel=info
 ```

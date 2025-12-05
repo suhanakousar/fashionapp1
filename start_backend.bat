@@ -29,7 +29,7 @@ if %errorlevel% neq 0 (
 REM Start API
 echo.
 echo Starting FastAPI server...
-cd api
+cd vercel-deploy\api
 python -m uvicorn app:app --reload --port 8000
 pause
 

@@ -1,4 +1,8 @@
-# StyleWeave Backend - Deployment Guide
+# StyleWeave Backend - Production Deployment Guide
+
+> **Note**: For quick deployment to Vercel + Railway/Render, see `DEPLOYMENT_GUIDE.md` or `QUICK_DEPLOY.md`
+> 
+> This guide covers advanced deployment options (Docker, Kubernetes, AWS, GCP, Azure)
 
 ## Production Deployment Checklist
 

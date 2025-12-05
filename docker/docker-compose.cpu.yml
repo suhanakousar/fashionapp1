@@ -35,7 +35,7 @@ services:
       - mongo
       - redis
     volumes:
-      - ../api:/app
+      - ../vercel-deploy/api:/app
     restart: unless-stopped
 
   worker:
@@ -48,7 +48,7 @@ services:
       - redis
       - mongo
     volumes:
-      - ../worker:/worker
+      - ../worker-deploy/worker:/worker
       - weights:/weights
     restart: unless-stopped
     # No GPU configuration for CPU mode

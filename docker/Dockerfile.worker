@@ -19,14 +19,14 @@ RUN apt-get update && apt-get install -y \
 WORKDIR /worker
 
 # Copy requirements and install Python dependencies
-COPY worker/requirements.txt /worker/requirements.txt
+COPY worker-deploy/worker/requirements.txt /worker/requirements.txt
 RUN pip3 install --no-cache-dir -r /worker/requirements.txt
 
 # Install segment-anything (if needed)
 # RUN pip3 install git+https://github.com/facebookresearch/segment-anything.git
 
 # Copy worker code
-COPY worker /worker
+COPY worker-deploy/worker /worker
 
 # Set working directory for Celery
 WORKDIR /worker

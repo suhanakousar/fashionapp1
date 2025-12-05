@@ -3,7 +3,15 @@ Pytest configuration and fixtures
 """
 import pytest
 import os
+import sys
+from pathlib import Path
 from unittest.mock import MagicMock
+
+# Add vercel-deploy/api to Python path for imports
+project_root = Path(__file__).parent.parent
+api_path = project_root / "vercel-deploy" / "api"
+if str(api_path) not in sys.path:
+    sys.path.insert(0, str(api_path))
 
 
 @pytest.fixture

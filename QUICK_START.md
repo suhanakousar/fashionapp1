@@ -30,14 +30,14 @@ docker run -d -p 27017:27017 --name mongo mongo:6
 docker run -d -p 6379:6379 --name redis redis:7-alpine
 
 # Terminal 3: API
-cd api
+cd vercel-deploy/api
 python -m venv venv
 source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
 uvicorn app:app --reload --port 8000
 
 # Terminal 4: Worker (optional for previews)
-cd worker
+cd worker-deploy/worker
 python -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt

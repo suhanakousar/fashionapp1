@@ -72,3 +72,9 @@ Thumbs.db
 # MongoDB
 *.db
 
+# Deployment folders (keep in repo, but ignore build artifacts)
+vercel-deploy/dist/
+vercel-deploy/node_modules/
+vercel-deploy/__pycache__/
+worker-deploy/__pycache__/
+

@@ -33,7 +33,7 @@ services:
       - mongo
       - redis
     volumes:
-      - ../api:/app
+      - ../vercel-deploy/api:/app
     restart: unless-stopped
 
   worker:
@@ -46,7 +46,7 @@ services:
       - redis
       - mongo
     volumes:
-      - ../worker:/worker
+      - ../worker-deploy/worker:/worker
       - weights:/weights  # Mount SAM checkpoints here
     restart: unless-stopped
     # GPU support (uncomment if you have nvidia-docker)

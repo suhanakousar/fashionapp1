@@ -1,6 +1,29 @@
-# StyleWeave Backend
+# StyleWeave AI
 
-Production-ready FastAPI backend for applying user-provided fabrics to model images using AI segmentation and inpainting.
+Production-ready full-stack application for applying user-provided fabrics to model images using AI segmentation and inpainting.
+
+## 🚀 Quick Deployment
+
+**Ready-to-deploy folders:**
+- **`vercel-deploy/`** - Deploy to Vercel (Frontend + API) → See `QUICK_DEPLOY.md`
+- **`worker-deploy/`** - Deploy to Railway/Render (ML Worker) → See `worker-deploy/README.md`
+
+For detailed deployment instructions, see:
+- `QUICK_DEPLOY.md` - Fastest way to deploy
+- `DEPLOYMENT_GUIDE.md` - Complete deployment guide
+- `vercel-deploy/README.md` - Vercel-specific guide
+- `worker-deploy/README.md` - Worker deployment options
+
+---
+
+## 📖 Local Development
+
+**Note:** Source code is now in deployment folders:
+- **API**: `vercel-deploy/api/`
+- **Frontend**: `vercel-deploy/src/`
+- **Worker**: `worker-deploy/worker/`
+
+This section covers local development. For deployment, see the guides above.
 
 ## Features
 
@@ -248,13 +271,13 @@ GET /v1/job/{job_id}
 
 **API:**
 ```bash
-cd api
+cd vercel-deploy/api
 pip install -r requirements.txt
 ```
 
 **Worker:**
 ```bash
-cd worker
+cd worker-deploy/worker
 pip install -r requirements.txt
 pip install git+https://github.com/facebookresearch/segment-anything.git
 ```
@@ -273,13 +296,13 @@ docker run -d -p 6379:6379 redis:7-alpine
 
 **Terminal 3 - API:**
 ```bash
-cd api
+cd vercel-deploy/api
 uvicorn app:app --reload --port 8000
 ```
 
 **Terminal 4 - Worker:**
 ```bash
-cd worker
+cd worker-deploy/worker
 celery -A tasks worker --loglevel=info
 ```
 
@@ -322,28 +345,25 @@ curl -X POST "http://localhost:8000/v1/outfit/apply_preview" \
 ## Project Structure
 
 ```
-styleweave/
-├── api/                    # FastAPI application
-│   ├── app.py             # Main FastAPI app
-│   ├── routes/            # API endpoints
-│   │   ├── upload.py
-│   │   ├── mask.py
-│   │   ├── outfit.py
-│   │   └── jobs.py
-│   ├── core/              # Core utilities
-│   │   ├── cloudinary_utils.py
-│   │   ├── mongo.py
-│   │   └── security.py
-│   ├── schemas.py         # Pydantic models
-│   └── requirements.txt
+BuildEachAll245/
+├── vercel-deploy/         # Frontend + API (deploy to Vercel)
+│   ├── api/              # FastAPI application
+│   │   ├── app.py        # Main FastAPI app
+│   │   ├── index.py      # Vercel serverless entry
+│   │   ├── routes/       # API endpoints
+│   │   ├── core/         # Core utilities
+│   │   └── requirements.txt
+│   ├── src/              # React frontend
+│   ├── vercel.json       # Vercel config
+│   └── package.json
 │
-├── worker/                # Celery worker
-│   ├── tasks.py          # Background tasks
-│   ├── inference/        # AI inference modules
-│   │   ├── sam_segmentation.py
-│   │   ├── texture_apply.py
-│   │   └── inpaint_sd.py
-│   └── requirements.txt
+├── worker-deploy/         # Worker (deploy to Railway/Render)
+│   ├── worker/           # Celery worker
+│   │   ├── tasks.py      # Background tasks
+│   │   ├── inference/    # AI inference modules
+│   │   └── requirements.txt
+│   ├── Dockerfile        # GPU version
+│   └── Dockerfile.cpu    # CPU version
 │
 ├── docker/                # Docker configuration
 │   ├── Dockerfile.api
@@ -357,7 +377,6 @@ styleweave/
 │   └── test_integration.py
 │
 ├── notebooks/            # Jupyter notebooks (reference)
-│   └── change-outfit-in-images-with-stable-diffusion.ipynb
 │
 ├── .env.example          # Environment template
 └── README.md

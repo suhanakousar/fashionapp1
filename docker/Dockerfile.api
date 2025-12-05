@@ -12,11 +12,11 @@ RUN apt-get update && apt-get install -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements and install Python dependencies
-COPY api/requirements.txt /app/requirements.txt
+COPY vercel-deploy/api/requirements.txt /app/requirements.txt
 RUN pip install --no-cache-dir -r /app/requirements.txt
 
 # Copy API code
-COPY api /app
+COPY vercel-deploy/api /app
 
 # Expose port
 EXPOSE 8000

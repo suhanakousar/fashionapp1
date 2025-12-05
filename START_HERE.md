@@ -33,7 +33,7 @@ Your backend is ready! Here's what's been set up:
 
 3. **Start the API:**
    ```bash
-   cd api
+   cd vercel-deploy/api
    uvicorn app:app --reload --port 8000
    ```
 
