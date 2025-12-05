@@ -17,12 +17,9 @@ try {
   const viteConfig = {
     plugins: [react()],
     resolve: {
-      alias: [
-        {
-          find: '@',
-          replacement: pathModule.resolve(__dirname, './src'),
-        },
-      ],
+      alias: {
+        '@': pathModule.resolve(__dirname, './src'),
+      },
       extensions: ['.mjs', '.js', '.mts', '.ts', '.jsx', '.tsx', '.json'],
     },
     build: {

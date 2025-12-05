@@ -20,6 +20,8 @@ wheels/
 .installed.cfg
 *.egg
 
+# Note: src/lib/ is NOT ignored - it contains frontend utilities
+
 # Virtual environments
 venv/
 env/
