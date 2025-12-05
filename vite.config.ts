@@ -29,10 +29,16 @@ export default defineConfig({
     rollupOptions: {
       input: path.resolve(__dirname, "index.html"),
       onwarn(warning, warn) {
-        // Suppress specific warnings
+        // Suppress specific warnings that can cause false errors
         if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return;
         if (warning.code === 'CIRCULAR_DEPENDENCY') return;
+        if (warning.code === 'THIS_IS_UNDEFINED') return;
+        if (warning.message?.includes('lucide-react')) return;
         warn(warning);
+      },
+      treeshake: {
+        preset: 'smallest',
+        moduleSideEffects: false,
       },
     },
     commonjsOptions: {
