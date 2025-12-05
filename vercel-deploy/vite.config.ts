@@ -28,12 +28,18 @@ export default defineConfig({
     minify: "esbuild",
     rollupOptions: {
       input: path.resolve(__dirname, "index.html"),
+      external: [], // Don't externalize anything - bundle everything
       onwarn(warning, warn) {
         // Suppress specific warnings that can cause false errors
         if (warning.code === 'UNUSED_EXTERNAL_IMPORT') return;
         if (warning.code === 'CIRCULAR_DEPENDENCY') return;
         if (warning.code === 'THIS_IS_UNDEFINED') return;
+        if (warning.code === 'MODULE_LEVEL_DIRECTIVE') return;
         if (warning.message?.includes('lucide-react')) return;
+        if (warning.message?.includes('externalize')) return;
+        if (warning.message?.includes('external')) return;
+        // Only show actual errors, suppress warnings
+        if (warning.code?.startsWith('PLUGIN_')) return;
         warn(warning);
       },
       treeshake: {
@@ -58,5 +64,9 @@ export default defineConfig({
   },
   ssr: {
     noExternal: ["lucide-react"],
+  },
+  // Ensure all dependencies are bundled
+  define: {
+    'process.env.NODE_ENV': JSON.stringify(process.env.NODE_ENV || 'production'),
   },
 });
