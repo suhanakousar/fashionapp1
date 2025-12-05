@@ -7,23 +7,23 @@
   "rewrites": [
     {
       "source": "/v1/(.*)",
-      "destination": "/api/index.py"
+      "destination": "/vercel-deploy/api/index.py"
     },
     {
       "source": "/health",
-      "destination": "/api/index.py"
+      "destination": "/vercel-deploy/api/index.py"
     },
     {
       "source": "/docs",
-      "destination": "/api/index.py"
+      "destination": "/vercel-deploy/api/index.py"
     },
     {
       "source": "/openapi.json",
-      "destination": "/api/index.py"
+      "destination": "/vercel-deploy/api/index.py"
     },
     {
       "source": "/(.*)",
-      "destination": "/index.html"
+      "destination": "/vercel-deploy/index.html"
     }
   ]
 }
