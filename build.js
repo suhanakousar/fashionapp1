@@ -10,28 +10,13 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 try {
-  // Dynamic imports to handle module resolution better
+  // Use vite's CLI to load config properly
   const { build } = await import('vite');
-  const react = (await import('@vitejs/plugin-react')).default;
-  const path = await import('path');
   
-  const viteConfig = {
-    plugins: [react()],
-    resolve: {
-      alias: {
-        '@': path.resolve(__dirname, './src'),
-      },
-      extensions: ['.js', '.jsx', '.ts', '.tsx', '.json'],
-    },
-    build: {
-      outDir: 'dist',
-      sourcemap: false,
-      minify: 'esbuild',
-      rollupOptions: {
-        input: path.resolve(__dirname, 'index.html'),
-      },
-    },
-  };
+  // Load config from vite.config.ts
+  const configFile = resolve(__dirname, 'vite.config.ts');
+  const configModule = await import(configFile + '?t=' + Date.now());
+  const viteConfig = configModule.default || configModule;
 
   await build(viteConfig);
   console.log('Build completed successfully!');
